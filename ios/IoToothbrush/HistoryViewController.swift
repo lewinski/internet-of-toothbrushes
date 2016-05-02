@@ -1,5 +1,5 @@
 //
-//  FirstViewController.swift
+//  HistoryViewController.swift
 //  IoToothbrush
 //
 //  Created by Matthew Lewinski on 5/1/16.
@@ -8,11 +8,11 @@
 
 import UIKit
 
-class FirstViewController: UIViewController {
+class HistoryViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        print("HistoryViewController viewDidLoad")
     }
 
     override func didReceiveMemoryWarning() {
