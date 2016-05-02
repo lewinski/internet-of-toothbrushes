@@ -1,0 +1,6 @@
+platform :ios, '9.0'
+
+target 'IoToothbrush' do
+  use_frameworks!
+  pod 'Bean-iOS-OSX-SDK'
+end
