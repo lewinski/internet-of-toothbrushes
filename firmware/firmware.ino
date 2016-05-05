@@ -153,14 +153,6 @@ void setup() {
 
   // The wake-up pin should have pull-up resistors to avoid floating voltages
   pinMode(PIN_WAKE, INPUT_PULLUP);
-
-  // Prototyping only: using D4 and D5 to provide power to other components
-  #define PIN_VCC 4
-  #define PIN_GND 5
-  pinMode(PIN_VCC, OUTPUT);
-  digitalWrite(PIN_VCC, HIGH);
-  pinMode(PIN_GND, OUTPUT);
-  digitalWrite(PIN_GND, LOW);
 }
 
 void loop() {
