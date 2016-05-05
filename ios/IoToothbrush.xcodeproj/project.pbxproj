@@ -331,6 +331,7 @@
 			baseConfigurationReference = 5E3CAC73A89EAF8A88FE7026 /* Pods-IoToothbrush.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = IoToothbrush/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.lewinski.IoToothbrush;
@@ -343,6 +344,7 @@
 			baseConfigurationReference = 589337EA6FDB82B542F74537 /* Pods-IoToothbrush.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = IoToothbrush/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.lewinski.IoToothbrush;
