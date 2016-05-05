@@ -7,9 +7,10 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "PTDBean.h"
 
 typedef void(^PTDFirmwareVersionCheckCompletion) (NSString *mostRecentFirmwareVersion, NSError *error);
-typedef void (^PTDFirmwareFetchCompletion)(NSArray *firmwareImagePaths, NSError *error);
+typedef void (^PTDFirmwareFetchCompletion)(NSString *pathA, NSString *pathB, NSError *error);
 
 @interface PTDBeanRemoteFirmwareVersionManager : NSObject
 

@@ -1,16 +1,25 @@
+//
+//  BeanDevice.m
+//  BleArduino
+//
+//  Created by Raymond Kampmeier on 1/16/14.
+//  Copyright (c) 2014 Punch Through Design. All rights reserved.
+//
+
 #import "PTDBean.h"
 #import "PTDBean+Protected.h"
 #import "PTDBeanManager+Protected.h"
 #import "GattSerialProfile.h"
+#import "BatteryProfile.h"
 #import "AppMessages.h"
 #import "AppMessagingLayer.h"
 #import "NSData+CRC.h"
 #import "PTDBeanRadioConfig.h"
 #import "CBPeripheral+RSSI_Universal.h"
-#import "PTDBeanRemoteFirmwareVersionManager.h"
-#import "PTDFirmwareHelper.h"
-#import "PTDUtils.h"
 
+#define DELAY_BEFORE_PROFILE_VALIDATION  0.5f
+#define PROFILE_VALIDATION_RETRY_TIMEOUT  10.0f
+#define PROFILE_VALIDATION_RETRIES    2
 #define ARDUINO_OAD_MAX_CHUNK_SIZE 64
 
 typedef enum { //These occur in sequence
@@ -21,28 +30,18 @@ typedef enum { //These occur in sequence
     BeanArduinoOADLocalState_Finished,
 } BeanArduinoOADLocalState;
 
-@interface PTDBean () <CBPeripheralDelegate, AppMessagingLayerDelegate, OAD_Delegate, BatteryProfileDelegate,
-                       DevInfoProfileDelegate>
-
-#pragma mark - Header readonly overrides
-
-@property (nonatomic, readwrite) BOOL updateInProgress;
-@property (nonatomic, readwrite) BOOL uploadInProgress;
-@property (nonatomic, readwrite) NSString *sketchName;
-@property (nonatomic, assign) NSInteger targetFirmwareVersion;
-@property (nonatomic, copy) void (^sketchErasedHandler)(BOOL sketchErased);
-
+@interface PTDBean () <CBPeripheralDelegate, ProfileDelegate_Protocol, AppMessagingLayerDelegate, OAD_Delegate, BatteryProfileDelegate>
 @end
 
 @implementation PTDBean
 {
+	BeanState                   _state;
 	id<PTDBeanManager>          _beanManager;
     
     AppMessagingLayer*          appMessageLayer;
     
-    NSSet*                      profilesRequiredForConnection;
-    NSMutableSet*               profilesValidated;
-
+    NSTimer*                    validationRetryTimer;
+    NSInteger                   validationRetryCount;
     DevInfoProfile*             deviceInfo_profile;
     OadProfile*                 oad_profile;
     GattSerialProfile*          gatt_serial_profile;
@@ -54,15 +53,7 @@ typedef enum { //These occur in sequence
     NSTimer*                    arduinoOADStateTimout;
     NSTimer*                    arduinoOADChunkSendTimer;
     
-    void (^firmwareVersionAvailableHandler)(BOOL firmwareAvailable, NSError *error);
-    void (^hardwareVersionAvailableHandler)(BOOL hardwareAvailable, NSError *error);
-    NSDate*                     firmwareUpdateStartTime;
-        
 }
-// Adding the "dynamic" directive tells the compiler that It doesn't need to create the getter, setter, and ivar.
-// This is assumed to have already been done in a superclass, or will be done during runtime.
-// In this case, getter, setter, and ivar are already up by the superclass, PTDBleDevice
-@dynamic delegate, name, state, identifier, lastDiscovered, advertisementData;
 
 //Enforce that you can't use the "init" function of this class
 - (id)init{
@@ -72,32 +63,71 @@ typedef enum { //These occur in sequence
 
 #pragma mark - Public Methods
 
-- (BOOL)isEqualToBean:(PTDBean *)bean {
-    return [self isEqual:bean];
+- (BOOL)isEqual:(id)object {
+    return [object isKindOfClass:[self class]] ? [self isEqualToBean:object] : NO;
 }
 
-#pragma mark - SDK
+- (NSUInteger)hash {
+    return self.identifier.hash;
+}
+
+- (BOOL)isEqualToBean:(PTDBean *)bean {
+    if([self.identifier isEqual:bean.identifier]){
+        return YES;
+    }
+    return NO;
+}
+
+-(void)sendMessage:(GattSerialMessage*)message{
+    [gatt_serial_profile sendMessage:message];
+}
+
+-(NSUUID*)identifier{
+    if(_peripheral && _peripheral.identifier){
+        return [_peripheral identifier];
+    }
+    return nil;
+}
+-(NSString*)name{
+    if(_peripheral.name){
+        return _peripheral.name;
+    }
+    return [_advertisementData objectForKey:CBAdvertisementDataLocalNameKey]?[_advertisementData objectForKey:CBAdvertisementDataLocalNameKey]:@"Unknown";//Local Name
+}
+-(NSNumber*)RSSI{
+    NSNumber* returnedRSSI;
+    if(_peripheral.state == CBPeripheralStateConnected
+    && [_peripheral RSSI_Universal]){
+        returnedRSSI = [_peripheral RSSI_Universal];
+    }else{
+        returnedRSSI = _RSSI;
+    }
+    // If RSSI == 127, that means it's unavailable. Return nil in this case
+    return (returnedRSSI.integerValue!=127)?returnedRSSI:nil;
+}
 -(NSNumber*)batteryVoltage{
-    if([self connected]
+    if(_peripheral.state == CBPeripheralStateConnected
        && battery_profile
        && [battery_profile batteryVoltage]){
         return [battery_profile batteryVoltage];
     }
     return nil;
 }
+-(BeanState)state{
+    return _state;
+}
+-(NSDictionary*)advertisementData{
+    return _advertisementData;
+}
+-(NSDate*)lastDiscovered{
+    return _lastDiscovered;
+}
 -(NSString*)firmwareVersion{
     if(deviceInfo_profile){
         return deviceInfo_profile.firmwareVersion;
     }
-    return nil;
+    return @"";
 }
--(NSString*)hardwareVersion{
-    if(deviceInfo_profile){
-        return deviceInfo_profile.hardwareVersion;
-    }
-    return nil;
-}
-
 -(PTDBeanManager*)beanManager{
     if(_beanManager){
         if([_beanManager isKindOfClass:[PTDBeanManager class]]){
@@ -107,6 +137,7 @@ typedef enum { //These occur in sequence
     return nil;
 }
 
+#pragma mark SDK
 - (void)releaseSerialGate {
   [appMessageLayer sendMessageWithID:MSG_ID_BT_END_GATE andPayload:nil];
 }
@@ -148,8 +179,8 @@ typedef enum { //These occur in sequence
     [appMessageLayer sendMessageWithID:MSG_ID_CC_GET_AR_POWER andPayload:nil];
 }
 -(void)programArduinoWithRawHexImage:(NSData*)hexImage andImageName:(NSString*)name{
-    if(self.state == BeanState_ConnectedAndValidated &&
-       self.peripheral.state == CBPeripheralStateConnected) //This second conditional is an assertion
+    if(_state == BeanState_ConnectedAndValidated &&
+       _peripheral.state == CBPeripheralStateConnected) //This second conditional is an assertion
     {
         [self __resetArduinoOADLocals];
         arduinoFwImage = hexImage?hexImage:[[NSData alloc] init];
@@ -178,16 +209,13 @@ typedef enum { //These occur in sequence
 
         localArduinoOADState = BeanArduinoOADLocalState_SendingStartCommand;
         if(imageSize!=0){
-            self.uploadInProgress = YES;
             [self __setArduinoOADTimeout:ARDUINO_OAD_GENERIC_TIMEOUT_SEC];
         }else{
             [self __resetArduinoOADLocals];
         }
     }else{
         NSError* error = [BEAN_Helper basicError:@"Bean isn't connected" domain:NSStringFromClass([self class]) code:100];
-        if (self.uploadInProgress) {
-            [self __alertDelegateOfArduinoOADCompletion:error];
-        }
+        [self __alertDelegateOfArduinoOADCompletion:error];
     }
 }
 -(void)sendSerialData:(NSData*)data{
@@ -202,14 +230,17 @@ typedef enum { //These occur in sequence
 }
 - (void)readRadioConfig {
     if(![self connected]) {
-        PTDLog(@"Can't read radio config, not connect.");
         return;
     }
-    PTDLog(@"Sending command to read radio config.");
     [appMessageLayer sendMessageWithID:MSG_ID_BT_GET_CONFIG andPayload:nil];
 }
 -(void)setRadioConfig:(PTDBeanRadioConfig*)config {
     if(![self connected]) {
+        return;
+    }
+    NSError *error;
+    if (![config validate:&error]) {
+        [self.delegate bean:self error:error];
         return;
     }
     BT_RADIOCONFIG_T raw;
@@ -228,17 +259,23 @@ typedef enum { //These occur in sequence
     raw.local_name_size = nameBytesLength;
     raw.power = config.power;
     NSData *data = [NSData dataWithBytes:&raw length: sizeof(BT_RADIOCONFIG_T)];
-    if ( config.configSave )
-        [appMessageLayer sendMessageWithID:MSG_ID_BT_SET_CONFIG andPayload:data];
-    else
-        [appMessageLayer sendMessageWithID:MSG_ID_BT_SET_CONFIG_NOSAVE andPayload:data];
-
+    [appMessageLayer sendMessageWithID:MSG_ID_BT_SET_CONFIG andPayload:data];
 }
 -(void)readAccelerationAxes {
     if(![self connected]) {
         return;
     }
     [appMessageLayer sendMessageWithID:MSG_ID_CC_ACCEL_READ andPayload:nil];
+}
+//Deprecated
+-(void)readAccelerationAxis {
+    [self readAccelerationAxes];
+}
+-(void)readRSSI {
+    if(![self connected]) {
+        return;
+    }
+    [_peripheral readRSSI];
 }
 -(void)readBatteryVoltage{
     if(battery_profile){
@@ -252,11 +289,10 @@ typedef enum { //These occur in sequence
     [appMessageLayer sendMessageWithID:MSG_ID_CC_TEMP_READ andPayload:nil];
 }
 #if TARGET_OS_IPHONE
--(void)setLedColor:(UIColor*)color
+-(void)setLedColor:(UIColor*)color {
 #else
--(void)setLedColor:(NSColor*)color
+-(void)setLedColor:(NSColor*)color {
 #endif
-{
     if(![self connected]) {
         return;
     }
@@ -279,6 +315,11 @@ typedef enum { //These occur in sequence
         return;
     }
     [appMessageLayer sendMessageWithID:MSG_ID_CC_LED_READ_ALL andPayload:nil];
+}
+    
+//This method is deprecated
+-(void)setScratchNumber:(NSInteger)scratchNumber withValue:(NSData*)value{
+    [self setScratchBank:scratchNumber data:value];
 }
     
 -(void)setScratchBank:(NSInteger)bank data:(NSData*)data{
@@ -316,73 +357,10 @@ typedef enum { //These occur in sequence
     }
     [appMessageLayer sendMessageWithID:MSG_ID_BT_GET_CONFIG andPayload:nil];
 }
-    
-- (void)checkFirmwareVersionAvailableWithHandler:(void (^)(BOOL firmwareAvailable, NSError *error))handler{
-    
-    if ( [self firmwareVersion] ) {
-        handler( YES, nil );
-    } else {
-        firmwareVersionAvailableHandler = handler;   // Wait until device info is valid
-    }
-}
 
-- (void)checkHardwareVersionAvailableWithHandler:(void (^)(BOOL hardwareAvailable, NSError *error))handler{
-    
-    if ( [self hardwareVersion] ) {
-        handler( YES, nil );
-    } else {
-        hardwareVersionAvailableHandler = handler;   // Wait until device info is valid
-    }
-}
-
-- (FirmwareStatus)firmwareUpdateAvailable:(NSInteger)bakedFirmwareVersion error:(NSError * __autoreleasing *)error
-{
-    return [PTDFirmwareHelper firmwareUpdateRequiredForBean:self availableFirmware:bakedFirmwareVersion withError:error];
-}
-
-- (void)updateFirmwareWithImages:(NSArray *)images andTargetVersion:(NSInteger)version
-{
-    self.targetFirmwareVersion = version;
-
-    if(!oad_profile && self.delegate && [self.delegate respondsToSelector:@selector(bean:completedFirmwareUploadWithError:)]) {
-        NSError* error = [BEAN_Helper basicError:@"OAD profile not present!" domain:NSStringFromClass([self class]) code:0];
-        [(id<PTDBeanExtendedDelegate>)self.delegate bean:self completedFirmwareUploadWithError:error];
-        return;
-    }
-    
-    _updateInProgress = TRUE;
-    _updateStepNumber++;
-    if (!firmwareUpdateStartTime) firmwareUpdateStartTime = [NSDate date];
-
-    [oad_profile updateFirmwareWithImagePaths:images];
-}
-
-- (void)cancelFirmwareUpdate{
-    if (self.updateInProgress) {
-        _updateInProgress = FALSE;
-        if (oad_profile)
-            [oad_profile cancel];
-    }
-}
-
-- (void)eraseSketchWithHandler:(void (^)(BOOL sketchErased))handler{
-    
-    if([self.sketchName isEqualToString:@""]) {
-        if (handler) {
-            handler(YES);
-        }
-        return;
-    }
-     
-    // program a nil image and image name to clear sketch
-    self.sketchErasedHandler = handler;
-#if TARGET_OS_IPHONE
-    [self setLedColor:[UIColor colorWithRed:0 green:0 blue:0 alpha:1]];
-#else
-    [self setLedColor:[NSColor colorWithRed:0 green:0 blue:0 alpha:1]];
-#endif
-    [self programArduinoWithRawHexImage:nil andImageName:@""];
-    [self readArduinoSketchInfo];
+-(BOOL)updateFirmwareWithImageAPath:(NSString*)imageApath andImageBPath:(NSString*)imageBpath{
+    if(!oad_profile)return FALSE;
+    return [oad_profile updateFirmwareWithImageAPath:imageApath andImageBPath:imageBpath];
 }
 
 #pragma mark - Protected Methods
@@ -392,49 +370,80 @@ typedef enum { //These occur in sequence
         _beanManager = manager;
         localArduinoOADState = BeanArduinoOADLocalState_Inactive;
         _arduinoPowerState = ArduinoPowerState_Unknown;
-        
-        // Default functionality. Can be overridden with the options parameter in [PTDBeanManager connectToBean:withOptions:error:]
-        [self setProfilesRequiredToConnect:@[[BatteryProfile class],
-                                                     [DevInfoProfile class],
-                                                     [GattSerialProfile class],
-                                                     [OadProfile class]
-                                                     ]];
     }
     return self;
 }
 
--(void)discoverServices{
-    
-    oad_profile = nil;
-    deviceInfo_profile = nil;
-    gatt_serial_profile = nil;
-    battery_profile = nil;
-    
-    [super discoverServices];
-    [self __checkIfRequiredProfilesAreValidated];
+-(void)interrogateAndValidate{
+    validationRetryCount = 0;
+    if(validationRetryTimer)[validationRetryTimer invalidate];
+    validationRetryTimer = nil;
+    validationRetryTimer = [NSTimer scheduledTimerWithTimeInterval:DELAY_BEFORE_PROFILE_VALIDATION target:self selector:@selector(__interrogateAndValidate) userInfo:nil repeats:NO];
 }
-    
+-(CBPeripheral*)peripheral{
+    return _peripheral;
+}
+-(void)setState:(BeanState)state{
+    _state = state;
+}
+-(void)setRSSI:(NSNumber*)rssi{
+    _RSSI = rssi;
+}
+-(void)setAdvertisementData:(NSDictionary*)adData{
+    _advertisementData = adData;
+}
+-(void)setLastDiscovered:(NSDate*)date{
+    _lastDiscovered = date;
+}
 -(void)setBeanManager:(id<PTDBeanManager>)manager{
     _beanManager = manager;
 }
--(void)setProfilesRequiredToConnect:(NSArray*)classes{
-    profilesRequiredForConnection = [NSSet setWithArray:classes];
-    profilesValidated = [[NSMutableSet alloc] init];
-}
--(void)sendMessage:(GattSerialMessage*)message{
-    [gatt_serial_profile sendMessage:message];
-}
 
 #pragma mark - Private Methods
+-(void)__interrogateAndValidate{
+    if(validationRetryCount >= PROFILE_VALIDATION_RETRIES){
+        //Clear retry counter
+        if(validationRetryTimer)[validationRetryTimer invalidate];
+        validationRetryTimer = nil;
+        //Notify Bean Manager of the error
+        if(_beanManager){
+            if([_beanManager respondsToSelector:@selector(bean:hasBeenValidated_error:)]){
+                NSError* error = [BEAN_Helper basicError:@"Validation Failed. Retry count exceeded" domain:NSStringFromClass([self class]) code:100];
+                [_beanManager bean:self hasBeenValidated_error:error];
+            }
+        }
+        return;
+    }else{
+        validationRetryTimer = [NSTimer scheduledTimerWithTimeInterval:PROFILE_VALIDATION_RETRY_TIMEOUT target:self selector:@selector(__interrogateAndValidate) userInfo:nil repeats:NO];
+    }
+    
+    //Initialize BLE Profiles
+    validationRetryCount++;
+    deviceInfo_profile = [[DevInfoProfile alloc] initWithPeripheral:_peripheral];
+    deviceInfo_profile.profileDelegate = self;
+    oad_profile = [[OadProfile alloc] initWithPeripheral:_peripheral  delegate:self];
+    oad_profile.profileDelegate = self;
+    gatt_serial_profile = [[GattSerialProfile alloc] initWithPeripheral:_peripheral  delegate:nil];
+    gatt_serial_profile.profileDelegate = self;
+    battery_profile = [[BatteryProfile alloc] initWithPeripheral:_peripheral delegate:self];
+    battery_profile.profileDelegate = self;
+    battery_profile.isRequired = FALSE;
+    _profiles = [[NSArray alloc] initWithObjects:deviceInfo_profile,
+                oad_profile,
+                gatt_serial_profile,
+                battery_profile,
+                nil];
+    
+    [super interrogateAndValidate];
+}
 
 -(void)__alertDelegateOfArduinoOADCompletion:(NSError*)error{
     [self __resetArduinoOADLocals];
-    self.uploadInProgress = NO;
-    if(self.delegate){
-        if([self.delegate respondsToSelector:@selector(bean:didProgramArduinoWithError:)]){
-            [self.delegate bean:self didProgramArduinoWithError:error];
+    if(_delegate){
+        if([_delegate respondsToSelector:@selector(bean:didProgramArduinoWithError:)]){
+            [_delegate bean:self didProgramArduinoWithError:error];
         }
-    } 
+    }
 }
 -(void)__resetArduinoOADLocals{
     arduinoFwImage = nil;
@@ -451,9 +460,7 @@ typedef enum { //These occur in sequence
 }
 -(void)__arduinoOADTimeout:(NSTimer*)timer{
     NSError* error = [BEAN_Helper basicError:@"Sketch upload failed!" domain:NSStringFromClass([self class]) code:0];
-    if (self.uploadInProgress) {
-        [self __alertDelegateOfArduinoOADCompletion:error];
-    }
+    [self __alertDelegateOfArduinoOADCompletion:error];
 }
 
 -(void)__sendArduinoOADChunk{ //Call this once. It will continue until the entire FW has been unloaded
@@ -471,11 +478,11 @@ typedef enum { //These occur in sequence
         if (arduinoOADChunkSendTimer) [arduinoOADChunkSendTimer invalidate];
         arduinoOADChunkSendTimer = [NSTimer scheduledTimerWithTimeInterval:0.2 target:self selector:@selector(__sendArduinoOADChunk) userInfo:nil repeats:NO];
         
-        if(self.delegate){
-            if([self.delegate respondsToSelector:@selector(bean:ArduinoProgrammingTimeLeft:withPercentage:)]){
+        if(_delegate){
+            if([_delegate respondsToSelector:@selector(bean:ArduinoProgrammingTimeLeft:withPercentage:)]){
                 NSNumber* percentComplete = @(arduinoFwImage_chunkIndex * 1.0f / arduinoFwImage.length);
                 NSNumber* timeRemaining = @(0.2 * ((arduinoFwImage.length - arduinoFwImage_chunkIndex)/ARDUINO_OAD_MAX_CHUNK_SIZE));
-                [self.delegate bean:self ArduinoProgrammingTimeLeft:timeRemaining withPercentage:percentComplete];
+                [_delegate bean:self ArduinoProgrammingTimeLeft:timeRemaining withPercentage:percentComplete];
             }
         }
     }
@@ -512,44 +519,26 @@ typedef enum { //These occur in sequence
             break;
         case BL_HL_STATE_COMPLETE:
             [self __alertDelegateOfArduinoOADCompletion:nil];
-            
             break;
         case BL_HL_STATE_ERROR:
         {
             NSError *error = [BEAN_Helper basicError:@"Sketch upload failed!" domain:NSStringFromClass([self class]) code:0];
-            if (self.uploadInProgress) {
-                [self __alertDelegateOfArduinoOADCompletion:error];
-            }
+            [self __alertDelegateOfArduinoOADCompletion:error];
             break;
         }
         default:
             break;
     }
 }
--(void)__profileHasBeenValidated:(BleProfile*)profile{
-    if([profilesRequiredForConnection containsObject:[profile class]]
-       && ![profilesValidated containsObject:[profile class]]){
-        [profilesValidated addObject:[profile class]];
-        
-        [self __checkIfRequiredProfilesAreValidated];
-    }
-}
--(void)__checkIfRequiredProfilesAreValidated{
-    
-    if([profilesRequiredForConnection isEqualToSet:profilesValidated])
-    {
-        self.uploadInProgress = NO;
-        if( _beanManager
-           && [_beanManager respondsToSelector:@selector(bean:hasBeenValidated_error:)])
-        {
-            [_beanManager bean:self hasBeenValidated_error:nil];
-        }
-    }
-}
+ 
 -(BOOL)connected {
-    if(self.state != BeanState_ConnectedAndValidated ||
-       self.peripheral.state != CBPeripheralStateConnected) //This second conditional is an assertion
+    if(_state != BeanState_ConnectedAndValidated ||
+       _peripheral.state != CBPeripheralStateConnected) //This second conditional is an assertion
     {
+        if(self.delegate && [self.delegate respondsToSelector:@selector(bean:error:)]) {
+            NSError *error = [BEAN_Helper basicError:@"Bean not connected" domain:NSStringFromClass([self class]) code:BeanErrors_NotConnected];
+            [self.delegate bean:self error:error];
+        }
         return NO;
     }
     return YES;
@@ -564,75 +553,6 @@ typedef enum { //These occur in sequence
     }
     return YES;
 }
-
-#pragma mark OAD firmware logic and state management
-
-/**
- *  Called whenever the firmware version profile is read to ensure Bean's firmware update process continues.
- */
-- (void)manageFirmwareUpdateStatus
-{
-    if ([PTDFirmwareHelper oadImageRunningOnBean:self]) {
-        NSLog(@"Bean is running OAD image. Update required.");
-        if (self.delegate && [self.delegate respondsToSelector:@selector(beanFoundWithIncompleteFirmware:)])
-            [self.delegate beanFoundWithIncompleteFirmware:self];
-        return;
-    }
-
-    if (!self.updateInProgress) {
-        NSLog(@"Bean isn't running OAD image and no update is in progress. No update required.");
-        return;
-    }
-
-    if (!self.targetFirmwareVersion) {
-        NSLog(@"Error: Bean requires update but target firmware version is unknown.");
-        return;
-    }
-
-    // Update in progress. See what the status of Bean is.
-    NSError *error;
-    FirmwareStatus updateStatus = [PTDFirmwareHelper firmwareUpdateRequiredForBean:self
-                                                                 availableFirmware:self.targetFirmwareVersion
-                                                                         withError:&error];
-    if (error) {
-        NSLog(@"Error fetching Bean update status: %@", error);
-        return;
-    }
-
-    if (updateStatus == FirmwareStatusBeanNeedsUpdate) {
-        // Bean is not fully up-to-date, and an update is in progress right now.
-        // This means Bean just reconnected and needs the next image in the update process.
-        if (self.delegate && [self.delegate respondsToSelector:@selector(beanFoundWithIncompleteFirmware:)])
-            [self.delegate beanFoundWithIncompleteFirmware:self];
-
-    } else if (updateStatus == FirmwareStatusUpToDate) {
-        // Update was in progress last time Bean disconnected, and the image is no longer an OAD update image.
-        // That means the update was successful and Bean is running a fully functional image.
-        [self completeFirmwareUpdateWithError:nil];
-
-    } else {
-        // Bean has more current firmware than Loader, or Bean firmware update status couldn't be determined
-        NSLog(@"Unexpected Bean update status: FirmwareStatus = %lu", updateStatus);
-        NSError *myError = nil;
-        [self completeFirmwareUpdateWithError:myError];
-    }
-}
-
-/**
- *  Called when a Bean that was in the middle of a firmware update process has just reconnected, and it's now running
- *  up to date firmware.
- *
- *  @param error nil if everything went OK, an NSError if something went wrong
- */
-- (void)completeFirmwareUpdateWithError:(NSError *)error
-{
-    firmwareUpdateStartTime = NULL;
-    _updateInProgress = FALSE;
-    _updateStepNumber = 0;
-    if (self.delegate && [self.delegate respondsToSelector:@selector(bean:completedFirmwareUploadWithError:)]) {
-        [(id<PTDBeanExtendedDelegate>)self.delegate bean:self completedFirmwareUploadWithError:error];
-    }
-}
     
 #pragma mark BleDevice Overridden Methods
 -(void)rssiDidUpdateWithError:(NSError*)error{
@@ -646,53 +566,26 @@ typedef enum { //These occur in sequence
 }
     
 #pragma mark Profile Delegate callbacks
--(void)profileDiscovered:(BleProfile*)profile
-{
-    if ([profile isMemberOfClass:[OadProfile class]]) {
-        oad_profile = (OadProfile*)profile;
-        __weak typeof(self) weakSelf = self;
-        [oad_profile validateWithCompletion: ^(NSError* error) {
-            if ( !error && [oad_profile isValid:nil] ) {
-                [weakSelf __profileHasBeenValidated:profile];
-            }
-        }];
-
-    } else if ([profile isMemberOfClass:[DevInfoProfile class]]) {
-        
-        deviceInfo_profile = (DevInfoProfile*)profile;
-        profile.delegate = self;
-        __weak typeof(self) weakSelf = self;
-        [deviceInfo_profile validateWithCompletion: ^(NSError* error) {
-            if ( !error)
-            {
-                [weakSelf __profileHasBeenValidated:profile];
-            }
-        }];
-
-    } else if ([profile isMemberOfClass:[GattSerialProfile class]]) {
-        gatt_serial_profile = (GattSerialProfile*)profile;
+-(void)profileValidated:(id<Profile_Protocol>)profile{
+    if(![self requiredProfilesAreValid]) return;
+    //At this point, all required profiles are validated
+    if(_state != BeanState_ConnectedAndValidated){
+        //Initialize Application Messaging layer
         appMessageLayer = [[AppMessagingLayer alloc] initWithGattSerialProfile:gatt_serial_profile];
         appMessageLayer.delegate = self;
         gatt_serial_profile.delegate = appMessageLayer;
-        __weak typeof(self) weakSelf = self;
-        [gatt_serial_profile validateWithCompletion: ^(NSError* error) {
-            if ( !error && [gatt_serial_profile isValid:nil] ) {
-                [weakSelf releaseSerialGate];
-                [weakSelf __profileHasBeenValidated:profile];
+        
+        if(validationRetryTimer)[validationRetryTimer invalidate];
+        validationRetryTimer = nil;
+        self.state = BeanState_ConnectedAndValidated;
+        if(_beanManager){
+            if([_beanManager respondsToSelector:@selector(bean:hasBeenValidated_error:)]){
+                [_beanManager bean:self hasBeenValidated_error:nil];
             }
-        }];
-    } else if ([profile isMemberOfClass:[BatteryProfile class]]) {
-        battery_profile = (BatteryProfile*)profile;
-        __weak typeof(self) weakSelf = self;
-        [battery_profile validateWithCompletion: ^(NSError *error) {
-            if ( !error && [battery_profile isValid:nil] ) {
-                [weakSelf batteryProfileDidUpdate];
-                [weakSelf __profileHasBeenValidated:profile];
-            }
-        }];
+        }
     }
 }
-
+    
 #pragma mark -
 #pragma mark AppMessagingLayerDelegate callbacks
 -(void)appMessagingLayer:(AppMessagingLayer*)layer recievedIncomingMessageWithID:(UInt16)identifier andPayload:(NSData*)payload{
@@ -716,26 +609,22 @@ typedef enum { //These occur in sequence
                 PTDLog(@"Invalid length of MSG_ID_BT_GET_CONFIG. Most likely an outdated version of FW");
                 break;
             }
-
-            BT_RADIOCONFIG_T rawData;
-            [payload getBytes:&rawData range:NSMakeRange(0, sizeof(BT_RADIOCONFIG_T))];
-            PTDBeanRadioConfig *config = [[PTDBeanRadioConfig alloc] init];
-            config.advertisingInterval = rawData.adv_int;
-            config.connectionInterval = rawData.conn_int;
-            // The (rawData.adv_mode != 0xFF) check is to catch a FW bug!
-            config.pairingPinEnabled = ((rawData.adv_mode & 0x80) && (rawData.adv_mode != 0xFF) )?TRUE:FALSE;
-            config.advertisingMode = rawData.adv_mode & (~0x80);
-            config.iBeacon_UUID = rawData.ibeacon_uuid;
-            config.iBeacon_majorID = rawData.ibeacon_major;
-            config.iBeacon_minorID = rawData.ibeacon_minor;
-            
-            config.name = [NSString stringWithUTF8String:(char*)rawData.local_name];
-            config.power = rawData.power;
-            _radioConfig = config;
-            
-            PTDLog(@"Radio config - Name: '%@' Advertising interval: %d Connection interval: %d", config.name, rawData.adv_int, rawData.conn_int );
-            
             if (self.delegate && [self.delegate respondsToSelector:@selector(bean:didUpdateRadioConfig:)]) {
+                BT_RADIOCONFIG_T rawData;
+                [payload getBytes:&rawData range:NSMakeRange(0, sizeof(BT_RADIOCONFIG_T))];
+                PTDBeanRadioConfig *config = [[PTDBeanRadioConfig alloc] init];
+                config.advertisingInterval = rawData.adv_int;
+                config.connectionInterval = rawData.conn_int;
+                // The (rawData.adv_mode != 0xFF) check is to catch a FW bug!
+                config.pairingPinEnabled = ((rawData.adv_mode & 0x80) && (rawData.adv_mode != 0xFF) )?TRUE:FALSE;
+                config.advertisingMode = rawData.adv_mode & (~0x80);
+                config.iBeacon_UUID = rawData.ibeacon_uuid;
+                config.iBeacon_majorID = rawData.ibeacon_major;
+                config.iBeacon_minorID = rawData.ibeacon_minor;
+                
+                config.name = [NSString stringWithUTF8String:(char*)rawData.local_name];
+                config.power = rawData.power;
+                _radioConfig = config;
                 [self.delegate bean:self didUpdateRadioConfig:config];
             }
             break;
@@ -752,6 +641,13 @@ typedef enum { //These occur in sequence
                 BT_SCRATCH_T rawData;
                 [payload getBytes:&rawData range:NSMakeRange(0, payload.length)];
                 NSData *scratch = [NSData dataWithBytes:rawData.scratch length:payload.length];
+                //This delegate call has been deprecated!
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+                if([self.delegate respondsToSelector:@selector(bean:didUpdateScratchNumber:withValue:)]){
+                    [self.delegate bean:self didUpdateScratchNumber:@(rawData.number) withValue:scratch];
+                }
+#pragma clang diagnostic pop
                 if([self.delegate respondsToSelector:@selector(bean:didUpdateScratchBank:data:)]){
                     [self.delegate bean:self didUpdateScratchBank:rawData.number data:scratch];
                 }
@@ -771,6 +667,9 @@ typedef enum { //These occur in sequence
             BL_MSG_STATUS_T stateMsg;
             [payload getBytes:&stateMsg range:NSMakeRange(0, sizeof(BL_MSG_STATUS_T))];
             BL_HL_STATE_T highLevelState = stateMsg.hlState;
+//            BL_STATE_T internalState = stateMsg.intState;
+//            UInt16 blocks = stateMsg.blocksSent;
+//            UInt16 bytes = stateMsg.bytesSent;
             [self __handleArduinoOADRemoteStateChange:highLevelState];
             break;
         case MSG_ID_CC_GET_AR_POWER:
@@ -791,16 +690,8 @@ typedef enum { //These occur in sequence
             NSData* nameBytes = [[NSData alloc] initWithBytes:meta.hexName length:nameSize];
             NSString* name = [[NSString alloc] initWithData:nameBytes encoding:NSUTF8StringEncoding];
             NSDate *date = [NSDate dateWithTimeIntervalSince1970:meta.timestamp];
-            self.sketchName = name;
+            _sketchName = name;
             _dateProgrammed = date;
-
-            // check for sketch erased handler
-            if (self.sketchErasedHandler) {
-                // execute sketch erased handler and clear
-                self.sketchErasedHandler([name isEqualToString:@""]);
-                self.sketchErasedHandler = nil;
-            }
-            
             if (self.delegate && [self.delegate respondsToSelector:@selector(bean:didUpdateSketchName:dateProgrammed:crc32:)]) {
                 [self.delegate bean:self didUpdateSketchName:name dateProgrammed:date crc32:meta.hexCrc];
             }
@@ -874,67 +765,31 @@ typedef enum { //These occur in sequence
 
 
 #pragma mark OAD callbacks
-
-- (void)device:(OadProfile *)device currentImage:(NSUInteger)index totalImages:(NSUInteger)images imageProgress:(NSUInteger)bytesSent imageSize:(NSUInteger)bytesTotal
-{
-    if (self.delegate && [self.delegate respondsToSelector:@selector(bean:currentImage:totalImages:imageProgress:imageSize:)]) {
-        [(id<PTDBeanExtendedDelegate>)self.delegate bean:self currentImage:index totalImages:images imageProgress:bytesSent imageSize:bytesTotal];
+-(void)device:(OadProfile*)device completedFirmwareUploadWithError:(NSError*)error{
+    if(_delegate){
+        if(/*[_delegate conformsToProtocol:@protocol(PTDBeanExtendedDelegate)]
+           && */[_delegate respondsToSelector:@selector(bean:completedFirmwareUploadWithError:)]){
+            [(id<PTDBeanExtendedDelegate>)_delegate bean:self completedFirmwareUploadWithError:error];
+        }
     }
 }
-
-- (void)device:(OadProfile *)device completedFirmwareUploadOfSingleImage:(NSString *)path imageIndex:(NSUInteger)index totalImages:(NSUInteger)images withError:(NSError *)error
-{
-    if (error) {
-        PTDLog(@"Error during OAD process: %@", error);
-        self.updateInProgress = NO;
-
-        // At this point, the firmware update has failed. Pass this error up the chain.
-        [self device:device completedFirmwareUploadWithError:error];
-        return;
+-(void)device:(OadProfile*)device OADUploadTimeLeft:(NSNumber*)seconds withPercentage:(NSNumber*)percentageComplete{
+    if(_delegate){
+        if(/*[_delegate conformsToProtocol:@protocol(PTDBeanExtendedDelegate)]
+           && */[_delegate respondsToSelector:@selector(bean:firmwareUploadTimeLeft:withPercentage:)]){
+            [(id<PTDBeanExtendedDelegate>)_delegate bean:self firmwareUploadTimeLeft:seconds withPercentage:percentageComplete];
+        }
     }
-
-    if (self.delegate && [self.delegate respondsToSelector:@selector(bean:completedFirmwareUploadOfSingleImage:imageIndex:totalImages:withError:)])
-        [(id<PTDBeanExtendedDelegate>)self.delegate bean:self completedFirmwareUploadOfSingleImage:path imageIndex:index totalImages:images withError:error];
 }
-
-- (void)device:(OadProfile*)device completedFirmwareUploadWithError:(NSError*)error
-{
-    if (self.delegate && [self.delegate respondsToSelector:@selector(bean:completedFirmwareUploadWithError:)])
-        [(id<PTDBeanExtendedDelegate>)self.delegate bean:self completedFirmwareUploadWithError:error];
-}
-
+    
 #pragma mark Battery Monitoring Delegate callbacks
--(void)batteryProfileDidUpdate
-{
-    if(self.delegate){
-        if([self.delegate respondsToSelector:@selector(beanDidUpdateBatteryVoltage:error:)]){
-            [self.delegate beanDidUpdateBatteryVoltage:self error:nil];
+-(void)batteryProfileDidUpdate:(BatteryProfile*)profile{
+    if(_delegate){
+        if([_delegate respondsToSelector:@selector(beanDidUpdateBatteryVoltage:error:)]){
+            [_delegate beanDidUpdateBatteryVoltage:self error:nil];
         }
     }
 }
 
-#pragma mark Device Info Profile callbacks
-
-- (void)hardwareVersionDidUpdate
-{
-    if (hardwareVersionAvailableHandler){
-        [self checkHardwareVersionAvailableWithHandler:hardwareVersionAvailableHandler];
-        hardwareVersionAvailableHandler = nil;
-    }
-}
-
-- (void)firmwareVersionDidUpdate
-{
-    // Continue or complete any firmware update in progress
-    [self manageFirmwareUpdateStatus];
-    
-    // Don't send firmware version back to handler when firmware update is still in progress
-    if (!self.updateInProgress) return;
-
-    if (firmwareVersionAvailableHandler) {
-        [self checkFirmwareVersionAvailableWithHandler:firmwareVersionAvailableHandler];
-        firmwareVersionAvailableHandler = nil;
-    }
-}
 
 @end

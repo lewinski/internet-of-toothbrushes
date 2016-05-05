@@ -73,10 +73,14 @@
  *  @discussion This property is ignored when using <[PTDBean setRadioConfig:]>. To enable or disable the pairing pin, use <[PTDBean setPairingPin:]>
  */
 @property (nonatomic) BOOL pairingPinEnabled;
+/// @name Validation
 /**
- *  A Boolean that specifies whether or not to save radio configuration changes to NVRAM
- *  If false, configuration changes will only persist until next Bean reset.
+ *  Validates a config
+ *
+ *  @param error See BeanErrors
+ *
+ *  @return YES if valid, NO if not
  */
-@property (nonatomic) BOOL configSave;
+-(BOOL)validate:(NSError**)error;
 
 @end

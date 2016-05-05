@@ -14,41 +14,19 @@
 #import <IOBluetooth/IOBluetooth.h>
 #endif
 
+#import "Profile_Protocol.h"
+#import "ProfileDelegate_Protocol.h"
 
-
-
-// This is an abstract class and should only be used when subclassed.
-@interface BleProfile : NSObject <CBPeripheralDelegate>
+@interface BleProfile : NSObject <Profile_Protocol>
 {
 @protected CBPeripheral* peripheral;
 @protected BOOL profileHasReportedValidity;
 }
 
-@property (nonatomic, weak) id delegate;
+@property (nonatomic, weak) id<ProfileDelegate_Protocol> profileDelegate;
+@property (nonatomic) BOOL isRequired;
 
-// Virtual methods that must be overridden in a subclass
--(void)validate; // Virtual method
--(BOOL)isValid:(NSError**)error; // Virtual method
-
-
--(void)validateWithCompletion:(void (^)(NSError *error))completion;
-
-// Protected methods that should only be called from a BleProfile subclass
+-(void)validate __attribute__((unavailable("You should always override this")));
+-(BOOL)isValid:(NSError**)error __attribute__((unavailable("You should always override this")));
 -(void)__notifyValidity;
-
-
-// Class factory methods
-+(void)registerProfile:(Class)subclass serviceUUID:(NSString*)uuid;
-+(BleProfile*)createBleProfileWithService:(CBService*)service;
-+(NSArray *)registeredProfiles;
-
-@end
-
-
-
-// These methods must be implemented in any BleProfile subclasses
-@protocol BleProfile
-@required
--(BOOL)isValid:(NSError**)error;
--(id)initWithService:(CBService*)service;
 @end

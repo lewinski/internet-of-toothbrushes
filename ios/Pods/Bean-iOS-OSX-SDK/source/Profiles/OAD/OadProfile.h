@@ -1,3 +1,11 @@
+//
+//  OADDevice.h
+//  BleArduino
+//
+//  Created by Raymond Kampmeier on 8/16/13.
+//  Copyright (c) 2013 Punch Through Design. All rights reserved.
+//
+
 #import <Foundation/Foundation.h>
 
 #ifdef __IPHONE_OS_VERSION_MIN_REQUIRED
@@ -11,57 +19,45 @@
 
 @protocol OAD_Delegate;
 
-@interface OadProfile : BleProfile <BleProfile>
+@interface OadProfile : BleProfile
 
-@property(nonatomic, weak) id<OAD_Delegate> delegate;
+-(id)initWithPeripheral:(CBPeripheral*)aPeripheral delegate:(id<OAD_Delegate>)delegate;
 
-/**
- *  Starts the OAD firmware update process for a Bean.
- *
- *  @param firmwareImages An NSArray of paths to firmware image binaries
- *
- *  @return YES if firmware update process was initialized successfully. NO if an error occurred. A return value of NO
- *      is accompanied by a call to device:completedFirmwareUploadWithError: with an error parametern present.
- */
-- (BOOL)updateFirmwareWithImagePaths:(NSArray *)firmwareImages;
+// Returns FALSE if OAD is not supported on the device. TRUE otherwise
+// See callback method: -(void)FirmwareVersion:(NSString*)version isNewer:(BOOL)isNewer;
+//-(BOOL)checkForNewFirmware:(NSString*)newFirmwareVersion;
 
-/**
- *  Cancels a firmware update in progress.
- */
-- (void)cancel;
+// Returns true if OAD is supported on the device and the device is connected.
+// Parameters imageApath and imageBpath are full paths to the images .bin files
+// See callback methods:
+//-(void)oadDeviceFailedOADUpload:(OAD_BLEDevice*)oadDevice;
+//-(void)oadDeviceCompletedOADUpload:(OAD_BLEDevice*)oadDevice;
+//-(void)oadDevice:(OAD_BLEDevice*)oadDevice OADUploadTimeLeft:(NSNumber*)seconds withPercentage:(NSNumber*)percentageComplete;
+//-(void)oadDeviceOADInvalidImage:(OAD_BLEDevice*)oadDevice;
+-(BOOL)updateFirmwareWithImageAPath:(NSString*)imageApath andImageBPath:(NSString*)imageBpath;
+
+// Cancels firmware update
+// No callbacks needed
+-(void)cancelUpdateFirmware;
 
 @end
+
+
 
 @protocol OAD_Delegate <NSObject>
 
 @optional
+// Callback for method: -(BOOL)checkForNewFirmware:(NSString*)newFirmwareVersion
+// Returns TRUE if the firmware is newer than on the device. FALSE otherwise
+-(void)device:(OadProfile*)device firmwareVersion:(NSString*)version isNewer:(BOOL)isNewer;
 
-/**
- *  Indicates upload progress for a single OAD firmware image in a firmware update operation.
- *
- *  @param device       The OadProfile for the device transferring OAD data
- *  @param index        The index of the current image being sent to Bean
- *  @param images       The total number of images being offered to Bean
- *  @param bytesSent    The number of bytes in the current image that have been sent to Bean
- *  @param bytesTotal   The number of bytes in the current image
- */
-- (void)device:(OadProfile *)device
-  currentImage:(NSUInteger)index
-   totalImages:(NSUInteger)images
- imageProgress:(NSUInteger)bytesSent
-     imageSize:(NSUInteger)bytesTotal;
+-(void)device:(OadProfile*)device completedFirmwareUploadWithError:(NSError*)error;
 
-/**
- *  Called when a single firmware image is successfully uploaded to Bean.
- *  Since most firmware updates send more than one image and wait for Bean to disconnect, reboot, and reconnect,
- *  updating a Bean's firmware will most likely result in multiple calls to this delegate - one for each image uploaded.
- *
- *  @param device The OadProfile for the Bean that completed an image upload
- *  @param path The path to the image that was just transferred to Bean
- *  @param index The index of the image that was just transferred to Bean
- *  @param images The total number of images being transferred to Bean, including ones that have been sent succesfully
- *  @param error Will be set to an NSError with info if an error occurs, or nil if nothing went wrong
- */
-- (void)device:(OadProfile *)device completedFirmwareUploadOfSingleImage:(NSString *)path imageIndex:(NSUInteger)index totalImages:(NSUInteger)images withError:(NSError *)error;
+// Callback for method: -(BOOL)updateFirmwareWithImageAPath:(NSString*)imageApath andImageBPath:(NSString*)imageBpath;
+// Called every time the time left changes
+-(void)device:(OadProfile*)device OADUploadTimeLeft:(NSNumber*)seconds withPercentage:(NSNumber*)percentageComplete;
+
 
 @end
+
+

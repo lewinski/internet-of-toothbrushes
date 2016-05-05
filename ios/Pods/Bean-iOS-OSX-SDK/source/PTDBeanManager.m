@@ -21,10 +21,6 @@
     NSMutableDictionary* beanRecords; //Uses NSUUID as key
 }
 
-NSString * const PTDBeanManagerConnectionOptionAutoReconnect = @"PTDBeanManagerConnectionOptionAutoReconnect";
-NSString * const PTDBeanManagerConnectionOptionConfigSave    = @"PTDBeanManagerConnectionOptionConfigSave";
-NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"PTDBeanManagerConnectionOptionProfilesRequiredToConnect";
-
 #pragma mark - Public methods
 
 -(instancetype)init{
@@ -117,10 +113,6 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
 }
 
 -(void)connectToBean:(PTDBean*)bean_ error:(NSError**)error{
-    [self connectToBean:bean_ withOptions:NULL error:error];
-}
-
--(void)connectToBean:(PTDBean*)bean_ withOptions:(NSDictionary*)options error:(NSError**)error{
     //Find BeanRecord that corresponds to this UUID
     PTDBean* bean = [beanRecords objectForKey:bean_.identifier];
     //If there is no such peripheral, return error
@@ -141,20 +133,9 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
         if(error) *error = [BEAN_Helper basicError:@"Attemp to connect to Bean failed. The device's current state is not eligible for a connection attempt." domain:NSStringFromClass([self class]) code:BeanErrors_DeviceNotEligible];
         return;
     }
-    
-    //Auto Reconnect?
-    if (options && options[PTDBeanManagerConnectionOptionAutoReconnect] )
-        bean.autoReconnect = TRUE;
-    
-    //Custom list of required profiles?
-    if (options
-        && options[PTDBeanManagerConnectionOptionProfilesRequiredToConnect]
-        && [options[PTDBeanManagerConnectionOptionProfilesRequiredToConnect] isKindOfClass:[NSArray class]]){
-        [bean setProfilesRequiredToConnect:options[PTDBeanManagerConnectionOptionProfilesRequiredToConnect]];
-    }
-
-    //Attempt to connect to the corresponding CBPeripheral
+    //Mark this BeanRecord as is in the middle of a connection attempt
     [bean setState:BeanState_AttemptingConnection];
+    //Attempt to connect to the corresponding CBPeripheral
     [cbcentralmanager connectPeripheral:bean.peripheral options:nil];
 }
 
@@ -183,9 +164,6 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
         [bean setState:BeanState_Discovered];
         [self __notifyDelegateOfDisconnectedBean:bean error:nil];
     }
-    
-    if (bean.updateInProgress) [bean cancelFirmwareUpdate];
-    bean.autoReconnect = FALSE;
 }
 
 -(void)disconnectFromAllBeans:(NSError **)error {
@@ -212,7 +190,6 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
         [self disconnectBean:bean error:nil];
     }else{
         //Validation is successful
-        bean.state = BeanState_ConnectedAndValidated;
     }
     
     //Notify Delegate
@@ -260,16 +237,37 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
     }
 }
 -(void)__notifyDelegateOfDiscoveredBean:(PTDBean*)bean error:(NSError*)error{
+    //Deprecated
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (self.delegate && [self.delegate respondsToSelector:@selector(BeanManager:didDiscoverBean:error:)]){
+        [self.delegate BeanManager:self didDiscoverBean:bean error:error];
+    }
+#pragma clang diagnostic pop
     if (self.delegate && [self.delegate respondsToSelector:@selector(beanManager:didDiscoverBean:error:)]){
         [self.delegate beanManager:self didDiscoverBean:bean error:error];
     }
 }
 -(void)__notifyDelegateOfConnectedBean:(PTDBean*)bean error:(NSError*)error{
+    //Deprecated
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (self.delegate && [self.delegate respondsToSelector:@selector(BeanManager:didConnectToBean:error:)]){
+        [self.delegate BeanManager:self didConnectToBean:bean error:error];
+    }
+#pragma clang diagnostic pop
     if (self.delegate && [self.delegate respondsToSelector:@selector(beanManager:didConnectBean:error:)]){
         [self.delegate beanManager:self didConnectBean:bean error:error];
     }
 }
 -(void)__notifyDelegateOfDisconnectedBean:(PTDBean*)bean error:(NSError*)error{
+    //Deprecated
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (self.delegate && [self.delegate respondsToSelector:@selector(BeanManager:didDisconnectBean:error:)]){
+        [self.delegate BeanManager:self didDisconnectBean:bean error:error];
+    }
+#pragma clang diagnostic pop
     if (self.delegate && [self.delegate respondsToSelector:@selector(beanManager:didDisconnectBean:error:)]){
         [self.delegate beanManager:self didDisconnectBean:bean error:error];
     }
@@ -294,7 +292,7 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
 }
 
 -(void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI{
-    //PTDLog(@"centralManager:didDiscoverPeripheral %@", peripheral);
+    PTDLog(@"centralManager:didDiscoverPeripheral %@", peripheral);
     PTDBean* bean = [self __processBeanRecordFromCBPeripheral:peripheral advertisementData:advertisementData RSSI:RSSI];
     if(bean){
         //Inform the delegate that we located a Bean
@@ -309,9 +307,9 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
     //If there is no such peripheral, return
     if(!bean)return;
     //Mark Bean peripheral as no longer being in a connection attempt
-    //bean.state = BeanState_AttemptingValidation;
+    bean.state = BeanState_AttemptingValidation;
     //Wait for Bean validation before responding to delegate
-    [bean discoverServices];
+    [bean interrogateAndValidate];
 }
 
 - (void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error{
@@ -339,15 +337,7 @@ NSString * const PTDBeanManagerConnectionOptionProfilesRequiredToConnect    = @"
         return;
     }
     
-    
-    if(!bean)
-        return; //This may not be the best way to handle this case
-    
-    if ( bean.autoReconnect || bean.updateInProgress ) {
-     PTDLog(@"autoReconnecting to %@", bean);
-     [self connectToBean:bean error:nil];
-    }
-    
+    if(!bean) return; //This may not be the best way to handle this case
     //Alert the delegate of the disconnect
     [self __notifyDelegateOfDisconnectedBean:bean error:error];
 }
