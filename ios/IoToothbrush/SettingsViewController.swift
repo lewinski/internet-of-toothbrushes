@@ -7,19 +7,32 @@
 //
 
 import UIKit
+import Bean_iOS_OSX_SDK
 
-class SettingsViewController: UIViewController {
+class SettingsViewController: UIViewController, PTDBeanDelegate {
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        print("SettingsViewController viewDidLoad")
+    var selectedBean : PTDBean? {
+        didSet {
+            reloadBean()
+        }
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    @IBOutlet weak var deviceLabel: UILabel!
+    @IBOutlet weak var batteryLabel: UILabel!
+
+    @IBAction func unwindToSettingsViewController(segue: UIStoryboardSegue) {
     }
 
+    func reloadBean() {
+        selectedBean?.delegate = self
+        selectedBean?.readBatteryVoltage()
 
+        deviceLabel.text = selectedBean?.identifier.UUIDString
+        batteryLabel.text = "fetching"
+    }
+
+    func beanDidUpdateBatteryVoltage(bean: PTDBean!, error: NSError!) {
+        batteryLabel.text = String(bean.batteryVoltage)
+    }
 }
 

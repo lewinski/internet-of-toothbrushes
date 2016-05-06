@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		23671542FF27C55AAAABD49C /* Pods_IoToothbrush.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A5D09362FD535DF80ACDCA6 /* Pods_IoToothbrush.framework */; };
+		E15E20F41CDAF51E005134B4 /* ChooseDeviceTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15E20F31CDAF51E005134B4 /* ChooseDeviceTableViewController.swift */; };
+		E15E20F61CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15E20F51CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift */; };
 		E1A886EC1CD6F09A005D1F13 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A886EB1CD6F09A005D1F13 /* AppDelegate.swift */; };
 		E1A886EE1CD6F09A005D1F13 /* HistoryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A886ED1CD6F09A005D1F13 /* HistoryViewController.swift */; };
 		E1A886F01CD6F09A005D1F13 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A886EF1CD6F09A005D1F13 /* SettingsViewController.swift */; };
@@ -20,6 +22,8 @@
 		589337EA6FDB82B542F74537 /* Pods-IoToothbrush.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IoToothbrush.release.xcconfig"; path = "Pods/Target Support Files/Pods-IoToothbrush/Pods-IoToothbrush.release.xcconfig"; sourceTree = "<group>"; };
 		5E3CAC73A89EAF8A88FE7026 /* Pods-IoToothbrush.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IoToothbrush.debug.xcconfig"; path = "Pods/Target Support Files/Pods-IoToothbrush/Pods-IoToothbrush.debug.xcconfig"; sourceTree = "<group>"; };
 		6A5D09362FD535DF80ACDCA6 /* Pods_IoToothbrush.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IoToothbrush.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		E15E20F31CDAF51E005134B4 /* ChooseDeviceTableViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChooseDeviceTableViewController.swift; sourceTree = "<group>"; };
+		E15E20F51CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChooseDeviceTableViewCell.swift; sourceTree = "<group>"; };
 		E1A886E81CD6F09A005D1F13 /* IoToothbrush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IoToothbrush.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1A886EB1CD6F09A005D1F13 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E1A886ED1CD6F09A005D1F13 /* HistoryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewController.swift; sourceTree = "<group>"; };
@@ -80,13 +84,15 @@
 		E1A886EA1CD6F09A005D1F13 /* IoToothbrush */ = {
 			isa = PBXGroup;
 			children = (
+				E1A886F91CD6F09A005D1F13 /* Info.plist */,
 				E1A886EB1CD6F09A005D1F13 /* AppDelegate.swift */,
+				E15E20F31CDAF51E005134B4 /* ChooseDeviceTableViewController.swift */,
+				E15E20F51CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift */,
 				E1A886ED1CD6F09A005D1F13 /* HistoryViewController.swift */,
 				E1A886EF1CD6F09A005D1F13 /* SettingsViewController.swift */,
-				E1A886F11CD6F09A005D1F13 /* Main.storyboard */,
 				E1A886F41CD6F09A005D1F13 /* Assets.xcassets */,
 				E1A886F61CD6F09A005D1F13 /* LaunchScreen.storyboard */,
-				E1A886F91CD6F09A005D1F13 /* Info.plist */,
+				E1A886F11CD6F09A005D1F13 /* Main.storyboard */,
 			);
 			path = IoToothbrush;
 			sourceTree = "<group>";
@@ -213,7 +219,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E15E20F41CDAF51E005134B4 /* ChooseDeviceTableViewController.swift in Sources */,
 				E1A886F01CD6F09A005D1F13 /* SettingsViewController.swift in Sources */,
+				E15E20F61CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift in Sources */,
 				E1A886EC1CD6F09A005D1F13 /* AppDelegate.swift in Sources */,
 				E1A886EE1CD6F09A005D1F13 /* HistoryViewController.swift in Sources */,
 			);
