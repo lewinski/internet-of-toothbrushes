@@ -20,6 +20,7 @@ class HistoryViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
-
+    func unwindToHistoryViewContainer() {
+    }
 }
 
