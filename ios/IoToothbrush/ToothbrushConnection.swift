@@ -9,7 +9,10 @@
 import Foundation
 
 protocol ToothbrushConnectionDelegate: class {
-    func timeRecieved(date: NSDate);
+    func sendCommand(command: String)
+
+    func timeReceived(date: NSDate)
+    func brushingEventReceived(start: NSDate, end: NSDate, duration: Int)
 }
 
 class ToothbrushConnection {
@@ -17,10 +20,16 @@ class ToothbrushConnection {
 
     private var buffer = ""
 
+    func sync() {
+        let date = NSDate().timeIntervalSince1970
+        delegate?.sendCommand("SetRTC " + String(Int(date)) + "\n")
+        delegate?.sendCommand("GetRTC\n")
+        delegate?.sendCommand("GetLastEvent\n")
+    }
+
     func handleIncomingData(data: NSData) {
         if let string = String(data: data, encoding: NSASCIIStringEncoding) {
             buffer += string
-            print(buffer)
         }
         
         if let lineEnd = buffer.rangeOfString("\n") {
@@ -37,13 +46,27 @@ class ToothbrushConnection {
     func dispatchCommand(command: String) {
         let args = command.characters.split { $0 == ":" }.map(String.init)
         switch (args[0]) {
-        case "GetLastEvent":
-            print("start = \(args[1])")
+
         case "GetRTC":
-            if let timestamp = Double(args[1]) {
+            print("GetRTC Response: \(args[1])")
+            if let timestamp = NSTimeInterval(args[1]) {
                 let date = NSDate(timeIntervalSince1970: timestamp)
-                delegate?.timeRecieved(date)
+                delegate?.timeReceived(date)
             }
+
+        case "SetRTC":
+            print("SetRTC Response: \(args[1])")
+
+        case "GetLastEvent":
+            print("GetLastEvent Response: \(args[1]) \(args[2]) \(args[3])")
+            if let startTimestamp = NSTimeInterval(args[1]), stopTimestamp = NSTimeInterval(args[2]) {
+                let duration = Int(args[3])
+                let startDate = NSDate(timeIntervalSince1970: startTimestamp)
+                let stopDate = NSDate(timeIntervalSince1970: stopTimestamp)
+                delegate?.brushingEventReceived(startDate, end: stopDate, duration: duration!)
+            }
+            break
+
         default:
             print("Unknown Response: \(command)")
         }

@@ -11,6 +11,8 @@ import Bean_iOS_OSX_SDK
 
 class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, ToothbrushConnectionDelegate, PTDBeanDelegate {
 
+    let dateFormatter = NSDateFormatter()
+
     var toothbrushDiscovery = ToothbrushDiscovery.sharedInstance
     var toothbrushConnection: ToothbrushConnection?
 
@@ -43,12 +45,25 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
     }
 
     @IBOutlet weak var connectButton: UIBarButtonItem!
+
     @IBOutlet weak var deviceLabel: UILabel!
     @IBOutlet weak var connectionStatusLabel: UILabel!
+
+    @IBOutlet weak var brushingStartedLabel: UILabel!
+    @IBOutlet weak var brushingStoppedLabel: UILabel!
+    @IBOutlet weak var brushingDurationLabel: UILabel!
+
     @IBOutlet weak var lastConnectionLabel: UILabel!
-    @IBOutlet weak var signalStrengthLabel: UILabel!
     @IBOutlet weak var batteryLabel: UILabel!
+    @IBOutlet weak var signalStrengthLabel: UILabel!
     @IBOutlet weak var rtcLabel: UILabel!
+
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        dateFormatter.dateStyle = .MediumStyle
+        dateFormatter.timeStyle = .MediumStyle
+    }
 
     @IBAction func unwindToSettingsViewController(segue: UIStoryboardSegue) {
     }
@@ -63,10 +78,7 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
 
     func didConnectToBean(bean: PTDBean) {
         connected = true
-        
-        let dateFormatter = NSDateFormatter()
-        dateFormatter.dateStyle = .MediumStyle
-        dateFormatter.timeStyle = .MediumStyle
+
         let date = NSDate()
         lastConnectionLabel.text = dateFormatter.stringFromDate(date)
 
@@ -75,7 +87,8 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
 
         bean.delegate = self
         bean.releaseSerialGate()
-        bean.sendSerialString("GetRTC\n")
+
+        toothbrushConnection?.sync()
         bean.readBatteryVoltage()
         bean.readRSSI()
     }
@@ -89,17 +102,26 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
     }
 
     func beanDidUpdateBatteryVoltage(bean: PTDBean!, error: NSError!) {
-        batteryLabel.text = String(bean.batteryVoltage) + " V"
+        batteryLabel.text = "\(bean.batteryVoltage) V"
     }
     
     func bean(bean: PTDBean!, serialDataReceived data: NSData!) {
         toothbrushConnection?.handleIncomingData(data)
     }
 
-    func timeRecieved(date: NSDate) {
-        let dateFormatter = NSDateFormatter()
-        dateFormatter.dateStyle = .MediumStyle
-        dateFormatter.timeStyle = .MediumStyle
+    // MARK: ToothbrushConnectionDelegate
+
+    func sendCommand(command: String) {
+        selectedBean?.sendSerialString(command)
+    }
+
+    func brushingEventReceived(start: NSDate, end: NSDate, duration: Int) {
+        brushingStartedLabel.text = dateFormatter.stringFromDate(start)
+        brushingStoppedLabel.text = dateFormatter.stringFromDate(end)
+        brushingDurationLabel.text = "\(duration) seconds"
+    }
+
+    func timeReceived(date: NSDate) {
         rtcLabel.text = dateFormatter.stringFromDate(date)
     }
 }
