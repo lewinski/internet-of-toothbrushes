@@ -13,6 +13,15 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
     var toothbrushDiscovery = ToothbrushDiscovery.sharedInstance
     var beans = [PTDBean]()
 
+    
+    @IBAction func refreshBeans(sender: AnyObject) {
+        toothbrushDiscovery.restartScan()
+    }
+    
+    @IBAction func cancel(sender: AnyObject) {
+        dismissViewControllerAnimated(true, completion: nil)
+    }
+
     // MARK: - View lifecycle
 
     override func viewDidLoad() {
@@ -29,10 +38,6 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
         toothbrushDiscovery.delegate = nil
     }
 
-    @IBAction func refreshBeans(sender: AnyObject) {
-        toothbrushDiscovery.restartScan()
-    }
-
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "selectDeviceSegue" {
             if let selectedRow = tableView.indexPathForSelectedRow {
@@ -40,10 +45,6 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
                 settingsViewController.selectedBean = beans[selectedRow.row]
             }
         }
-    }
-    
-    @IBAction func cancel(sender: AnyObject) {
-        dismissViewControllerAnimated(true, completion: nil)
     }
 
     // MARK: - Toothbrush discovery delegate

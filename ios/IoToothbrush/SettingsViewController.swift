@@ -9,9 +9,10 @@
 import UIKit
 import Bean_iOS_OSX_SDK
 
-class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, PTDBeanDelegate {
+class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, ToothbrushConnectionDelegate, PTDBeanDelegate {
 
     var toothbrushDiscovery = ToothbrushDiscovery.sharedInstance
+    var toothbrushConnection: ToothbrushConnection?
 
     var selectedBean : PTDBean? {
         didSet {
@@ -47,6 +48,7 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, PTD
     @IBOutlet weak var lastConnectionLabel: UILabel!
     @IBOutlet weak var signalStrengthLabel: UILabel!
     @IBOutlet weak var batteryLabel: UILabel!
+    @IBOutlet weak var rtcLabel: UILabel!
 
     @IBAction func unwindToSettingsViewController(segue: UIStoryboardSegue) {
     }
@@ -67,7 +69,10 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, PTD
         dateFormatter.timeStyle = .MediumStyle
         let date = NSDate()
         lastConnectionLabel.text = dateFormatter.stringFromDate(date)
-        
+
+        toothbrushConnection = ToothbrushConnection()
+        toothbrushConnection?.delegate = self
+
         bean.delegate = self
         bean.releaseSerialGate()
         bean.sendSerialString("GetRTC\n")
@@ -88,8 +93,14 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, PTD
     }
     
     func bean(bean: PTDBean!, serialDataReceived data: NSData!) {
-        let string = String(data: data, encoding: NSASCIIStringEncoding)
-        print(string)
+        toothbrushConnection?.handleIncomingData(data)
+    }
+
+    func timeRecieved(date: NSDate) {
+        let dateFormatter = NSDateFormatter()
+        dateFormatter.dateStyle = .MediumStyle
+        dateFormatter.timeStyle = .MediumStyle
+        rtcLabel.text = dateFormatter.stringFromDate(date)
     }
 }
 

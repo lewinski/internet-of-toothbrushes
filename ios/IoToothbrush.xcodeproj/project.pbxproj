@@ -17,6 +17,7 @@
 		E1A886F31CD6F09A005D1F13 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E1A886F11CD6F09A005D1F13 /* Main.storyboard */; };
 		E1A886F51CD6F09A005D1F13 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1A886F41CD6F09A005D1F13 /* Assets.xcassets */; };
 		E1A886F81CD6F09A005D1F13 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E1A886F61CD6F09A005D1F13 /* LaunchScreen.storyboard */; };
+		E1AD7F7A1CDE48CD008F4F70 /* ToothbrushConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AD7F791CDE48CD008F4F70 /* ToothbrushConnection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		E1A886F41CD6F09A005D1F13 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E1A886F71CD6F09A005D1F13 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		E1A886F91CD6F09A005D1F13 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E1AD7F791CDE48CD008F4F70 /* ToothbrushConnection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToothbrushConnection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +98,7 @@
 				E1A886F61CD6F09A005D1F13 /* LaunchScreen.storyboard */,
 				E1A886F11CD6F09A005D1F13 /* Main.storyboard */,
 				E183A80C1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift */,
+				E1AD7F791CDE48CD008F4F70 /* ToothbrushConnection.swift */,
 			);
 			path = IoToothbrush;
 			sourceTree = "<group>";
@@ -226,6 +229,7 @@
 				E1A886F01CD6F09A005D1F13 /* SettingsViewController.swift in Sources */,
 				E183A80D1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift in Sources */,
 				E15E20F61CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift in Sources */,
+				E1AD7F7A1CDE48CD008F4F70 /* ToothbrushConnection.swift in Sources */,
 				E1A886EC1CD6F09A005D1F13 /* AppDelegate.swift in Sources */,
 				E1A886EE1CD6F09A005D1F13 /* HistoryViewController.swift in Sources */,
 			);
