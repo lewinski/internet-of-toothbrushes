@@ -9,80 +9,51 @@
 import UIKit
 import Bean_iOS_OSX_SDK
 
-class ChooseDeviceTableViewController: UITableViewController, PTDBeanManagerDelegate {
-
-    var beanManager: PTDBeanManager?
+class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscoveryDelegate {
+    var toothbrushDiscovery = ToothbrushDiscovery.sharedInstance
     var beans = [PTDBean]()
-    var beansSeen = Set<NSUUID>()
 
     // MARK: - View lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
-        beanManager = appDelegate.beanManager
-        beanManager!.delegate = self
-        beanManager!.disconnectFromAllBeans(nil)
+        toothbrushDiscovery.delegate = self
     }
 
     override func viewWillAppear(animated: Bool) {
-        startScan()
+        toothbrushDiscovery.restartScan()
     }
     
     override func viewWillDisappear(animated: Bool) {
-        stopScan()
+        toothbrushDiscovery.stopScan()
+        toothbrushDiscovery.delegate = nil
     }
 
     @IBAction func refreshBeans(sender: AnyObject) {
-        startScan()
+        toothbrushDiscovery.restartScan()
     }
 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "selectDeviceSegue" {
             if let selectedRow = tableView.indexPathForSelectedRow {
-                let bean = beans[selectedRow.row]
-                var error : NSError?
-                beanManager?.connectToBean(bean, error: &error)
-                
                 let settingsViewController = segue.destinationViewController as! SettingsViewController
-                settingsViewController.selectedBean = bean
+                settingsViewController.selectedBean = beans[selectedRow.row]
             }
         }
     }
 
-    // MARK: - Bluetooth
+    @IBAction func cancel(sender: AnyObject) {
+        dismissViewControllerAnimated(true, completion: nil)
+    }
 
-    func startScan() {
-        beans.removeAll()
-        beansSeen.removeAll()
+    // MARK: - Toothbrush discovery delegate
+
+    func didDiscoverBean(bean: PTDBean) {
+        beans.append(bean)
         tableView.reloadData()
-
-        var error : NSError?
-        beanManager!.startScanningForBeans_error(&error)
-        if let e = error {
-            print(e)
-        }
+        refreshControl?.endRefreshing()
     }
 
-    func stopScan() {
-        var error : NSError?
-        beanManager!.stopScanningForBeans_error(&error)
-        if let e = error {
-            print(e)
-        }
-    }
-
-    // MARK: - Bean manager delegate
-
-    func beanManager(beanManager: PTDBeanManager!, didDiscoverBean bean: PTDBean!, error: NSError!) {
-        if (bean.name == "IoToothbrush" && !beansSeen.contains(bean.identifier)) {
-            beansSeen.insert(bean.identifier)
-            beans.append(bean)
-            tableView.reloadData()
-        }
-    }
-    
     // MARK: - Table view data source
 
     override func numberOfSectionsInTableView(tableView: UITableView) -> Int {

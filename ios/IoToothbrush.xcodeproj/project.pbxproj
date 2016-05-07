@@ -10,6 +10,7 @@
 		23671542FF27C55AAAABD49C /* Pods_IoToothbrush.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A5D09362FD535DF80ACDCA6 /* Pods_IoToothbrush.framework */; };
 		E15E20F41CDAF51E005134B4 /* ChooseDeviceTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15E20F31CDAF51E005134B4 /* ChooseDeviceTableViewController.swift */; };
 		E15E20F61CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15E20F51CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift */; };
+		E183A80D1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = E183A80C1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift */; };
 		E1A886EC1CD6F09A005D1F13 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A886EB1CD6F09A005D1F13 /* AppDelegate.swift */; };
 		E1A886EE1CD6F09A005D1F13 /* HistoryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A886ED1CD6F09A005D1F13 /* HistoryViewController.swift */; };
 		E1A886F01CD6F09A005D1F13 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A886EF1CD6F09A005D1F13 /* SettingsViewController.swift */; };
@@ -24,6 +25,7 @@
 		6A5D09362FD535DF80ACDCA6 /* Pods_IoToothbrush.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IoToothbrush.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E15E20F31CDAF51E005134B4 /* ChooseDeviceTableViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChooseDeviceTableViewController.swift; sourceTree = "<group>"; };
 		E15E20F51CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChooseDeviceTableViewCell.swift; sourceTree = "<group>"; };
+		E183A80C1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToothbrushDiscovery.swift; sourceTree = "<group>"; };
 		E1A886E81CD6F09A005D1F13 /* IoToothbrush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IoToothbrush.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1A886EB1CD6F09A005D1F13 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E1A886ED1CD6F09A005D1F13 /* HistoryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewController.swift; sourceTree = "<group>"; };
@@ -93,6 +95,7 @@
 				E1A886F41CD6F09A005D1F13 /* Assets.xcassets */,
 				E1A886F61CD6F09A005D1F13 /* LaunchScreen.storyboard */,
 				E1A886F11CD6F09A005D1F13 /* Main.storyboard */,
+				E183A80C1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift */,
 			);
 			path = IoToothbrush;
 			sourceTree = "<group>";
@@ -221,6 +224,7 @@
 			files = (
 				E15E20F41CDAF51E005134B4 /* ChooseDeviceTableViewController.swift in Sources */,
 				E1A886F01CD6F09A005D1F13 /* SettingsViewController.swift in Sources */,
+				E183A80D1CDD7A9600DC3D4A /* ToothbrushDiscovery.swift in Sources */,
 				E15E20F61CDB0E5F005134B4 /* ChooseDeviceTableViewCell.swift in Sources */,
 				E1A886EC1CD6F09A005D1F13 /* AppDelegate.swift in Sources */,
 				E1A886EE1CD6F09A005D1F13 /* HistoryViewController.swift in Sources */,
