@@ -125,7 +125,8 @@ void handleSerialCommand() {
   if (strncmp("GetRTC", commandBuffer, 6) == 0) {
     currentTime = rtc.now();
     Serial.print("GetRTC:");
-    Serial.println(currentTime.unixtime());
+    Serial.print(currentTime.unixtime());
+    Serial.println("");
 
   } else if (strncmp("SetRTC ", commandBuffer, 7) == 0) {
     uint32_t timestamp = strtoul(commandBuffer + 7, NULL, 10);
@@ -134,15 +135,17 @@ void handleSerialCommand() {
 
   } else if (strncmp("GetLastEvent", commandBuffer, 12) == 0) {
     Serial.print("GetLastEvent:");
-    Serial.println(brushingStartedTimestamp);
-    Serial.print("GetLastEvent:");
-    Serial.println(brushingStoppedTimestamp);
-    Serial.print("GetLastEvent:");
-    Serial.println(brushingSessionLength);
+    Serial.print(brushingStartedTimestamp);
+    Serial.print(":");
+    Serial.print(brushingStoppedTimestamp);
+    Serial.print(":");
+    Serial.print(brushingSessionLength);
+    Serial.println("");
 
   } else {
     Serial.print("Unknown:");
-    Serial.println(commandBuffer);
+    Serial.print(commandBuffer);
+    Serial.println("");
   }
 }
 
