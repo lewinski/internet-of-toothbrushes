@@ -41,7 +41,7 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
             }
         }
     }
-
+    
     @IBAction func cancel(sender: AnyObject) {
         dismissViewControllerAnimated(true, completion: nil)
     }

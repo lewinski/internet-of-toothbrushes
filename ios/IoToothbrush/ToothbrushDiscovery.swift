@@ -12,6 +12,7 @@ import Bean_iOS_OSX_SDK
 @objc protocol ToothbrushDiscoveryDelegate: class {
     optional func didDiscoverBean(bean: PTDBean)
     optional func didConnectToBean(bean: PTDBean)
+    optional func didDisconnectFromBean(bean: PTDBean)
 }
 
 class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
@@ -82,5 +83,13 @@ class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
             beansSeen.insert(bean.identifier)
             delegate?.didDiscoverBean?(bean)
         }
+    }
+
+    func beanManager(beanManager: PTDBeanManager!, didConnectBean bean: PTDBean!, error: NSError!) {
+        delegate?.didConnectToBean?(bean)
+    }
+
+    func beanManager(beanManager: PTDBeanManager!, didDisconnectBean bean: PTDBean!, error: NSError!) {
+        delegate?.didDisconnectFromBean?(bean)
     }
 }

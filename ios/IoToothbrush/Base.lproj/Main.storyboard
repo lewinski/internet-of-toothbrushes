@@ -50,7 +50,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="eab-sa-pVt">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="eab-sa-pVt">
                                 <rect key="frame" x="20" y="28" width="104" height="30"/>
                                 <state key="normal" title="Choose Device"/>
                                 <connections>
@@ -59,46 +59,62 @@
                                     </segue>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" misplaced="YES" text="Selected Device" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KcO-HT-uHZ">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Selected Device" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KcO-HT-uHZ">
                                 <rect key="frame" x="20" y="66" width="560" height="21"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" misplaced="YES" text="none" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="G2r-bQ-Wan">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="none" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="G2r-bQ-Wan">
                                 <rect key="frame" x="20" y="94" width="560" height="21"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" misplaced="YES" text="Battery" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Fee-jr-Q9h">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Battery" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Fee-jr-Q9h">
                                 <rect key="frame" x="20" y="123" width="560" height="21"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" misplaced="YES" text="n/a" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="qMw-PS-AqH">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="n/a" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="qMw-PS-AqH">
                                 <rect key="frame" x="20" y="152" width="560" height="21"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
+                            <button opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="77I-N6-DAO">
+                                <rect key="frame" x="132" y="28" width="59" height="30"/>
+                                <state key="normal" title="Connect"/>
+                                <connections>
+                                    <action selector="connectToBean:" destination="8rJ-Kc-sve" eventType="touchUpInside" id="1ec-ZA-2cZ"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
                             <constraint firstAttribute="trailingMargin" secondItem="qMw-PS-AqH" secondAttribute="trailing" id="8AE-cI-feO"/>
+                            <constraint firstAttribute="leadingMargin" secondItem="eab-sa-pVt" secondAttribute="leading" id="Jrv-X0-w4Z"/>
                             <constraint firstAttribute="trailingMargin" secondItem="Fee-jr-Q9h" secondAttribute="trailing" id="Qyc-By-HQ8"/>
+                            <constraint firstItem="77I-N6-DAO" firstAttribute="top" secondItem="L7p-HK-0SC" secondAttribute="bottom" constant="8" id="Rnr-vW-ysV"/>
                             <constraint firstAttribute="trailingMargin" secondItem="G2r-bQ-Wan" secondAttribute="trailing" id="VBe-qz-ILQ"/>
                             <constraint firstAttribute="trailingMargin" secondItem="KcO-HT-uHZ" secondAttribute="trailing" id="Wfy-Nr-Fmi"/>
+                            <constraint firstItem="eab-sa-pVt" firstAttribute="top" secondItem="L7p-HK-0SC" secondAttribute="bottom" constant="8" id="Zjx-eh-HMQ"/>
                             <constraint firstItem="KcO-HT-uHZ" firstAttribute="leading" secondItem="QS5-Rx-YEW" secondAttribute="leadingMargin" id="aBP-kI-pfb"/>
+                            <constraint firstItem="KcO-HT-uHZ" firstAttribute="top" secondItem="eab-sa-pVt" secondAttribute="bottom" constant="8" id="fnV-g1-Mew"/>
                             <constraint firstItem="Fee-jr-Q9h" firstAttribute="leading" secondItem="QS5-Rx-YEW" secondAttribute="leadingMargin" id="kOM-qA-nMH"/>
+                            <constraint firstItem="qMw-PS-AqH" firstAttribute="top" secondItem="Fee-jr-Q9h" secondAttribute="bottom" constant="8" id="mAJ-Uy-G58"/>
                             <constraint firstItem="G2r-bQ-Wan" firstAttribute="leading" secondItem="QS5-Rx-YEW" secondAttribute="leadingMargin" id="nbu-Q7-mF1"/>
+                            <constraint firstItem="77I-N6-DAO" firstAttribute="leading" secondItem="eab-sa-pVt" secondAttribute="trailing" constant="8" id="rkk-lV-pUJ"/>
                             <constraint firstItem="qMw-PS-AqH" firstAttribute="leading" secondItem="QS5-Rx-YEW" secondAttribute="leadingMargin" id="uAE-N3-y3X"/>
+                            <constraint firstItem="G2r-bQ-Wan" firstAttribute="top" secondItem="KcO-HT-uHZ" secondAttribute="bottom" constant="7" id="vnn-FY-nng"/>
+                            <constraint firstItem="Fee-jr-Q9h" firstAttribute="top" secondItem="G2r-bQ-Wan" secondAttribute="bottom" constant="8" id="yqe-XR-AKx"/>
                         </constraints>
                     </view>
                     <tabBarItem key="tabBarItem" title="Settings" image="syncing" id="cPa-gy-q4n"/>
                     <connections>
                         <outlet property="batteryLabel" destination="qMw-PS-AqH" id="4Ub-g8-jk8"/>
+                        <outlet property="connectButton" destination="77I-N6-DAO" id="tBe-dj-dKq"/>
                         <outlet property="deviceLabel" destination="G2r-bQ-Wan" id="Xtw-Em-n9R"/>
                     </connections>
                 </viewController>

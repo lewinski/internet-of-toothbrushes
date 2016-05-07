@@ -9,26 +9,55 @@
 import UIKit
 import Bean_iOS_OSX_SDK
 
-class SettingsViewController: UIViewController, PTDBeanDelegate {
+class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, PTDBeanDelegate {
+
+    var toothbrushDiscovery = ToothbrushDiscovery.sharedInstance
 
     var selectedBean : PTDBean? {
         didSet {
-            reloadBean()
+            if (selectedBean != nil) {
+                if (!connected) {
+                    connectButton.enabled = true
+                }
+                deviceLabel.text = selectedBean!.identifier.UUIDString
+            }
         }
     }
 
+    var connected = false {
+        didSet {
+            if (!connected && selectedBean != nil) {
+                connectButton.enabled = true
+            } else {
+                connectButton.enabled = false
+            }
+        }
+    }
+
+    @IBOutlet weak var connectButton: UIButton!
     @IBOutlet weak var deviceLabel: UILabel!
     @IBOutlet weak var batteryLabel: UILabel!
 
     @IBAction func unwindToSettingsViewController(segue: UIStoryboardSegue) {
     }
 
-    func reloadBean() {
-        selectedBean?.delegate = self
-        selectedBean?.readBatteryVoltage()
+    @IBAction func connectToBean(sender: AnyObject) {
+        batteryLabel.text = "connecting"
 
-        deviceLabel.text = selectedBean?.identifier.UUIDString
+        toothbrushDiscovery.delegate = self
+        toothbrushDiscovery.connectTo(selectedBean!)
+    }
+
+    func didConnectToBean(bean: PTDBean) {
+        connected = true
         batteryLabel.text = "fetching"
+        
+        bean.delegate = self
+        bean.readBatteryVoltage()
+    }
+
+    func didDisconnectFromBean(bean: PTDBean) {
+        connected = false
     }
 
     func beanDidUpdateBatteryVoltage(bean: PTDBean!, error: NSError!) {
