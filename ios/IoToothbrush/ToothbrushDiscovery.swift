@@ -36,7 +36,7 @@ class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
         var error : NSError?
         beanManager.disconnectFromAllBeans(&error)
         if let e = error {
-            print("disconnectFromAllBeans: \(e)")
+            print("[ERROR] disconnectFromAllBeans: \(e)")
         }
 
         startScan()
@@ -49,7 +49,7 @@ class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
             var error : NSError?
             beanManager.startScanningForBeans_error(&error)
             if let e = error {
-                print("startScanningForBeans_error: \(e)")
+                print("[ERROR] startScanningForBeans: \(e)")
             }
         }
     }
@@ -60,7 +60,7 @@ class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
         var error : NSError?
         beanManager.stopScanningForBeans_error(&error)
         if let e = error {
-            print("stopScanningForBeans_error: \(e)")
+            print("[ERROR] stopScanningForBeans: \(e)")
         }
     }
 
@@ -68,7 +68,7 @@ class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
         var error : NSError?
         beanManager.connectToBean(bean, error: &error)
         if let e = error {
-            print("connectToBean: \(e)")
+            print("[ERROR] connectToBean: \(e)")
         }
     }
 
