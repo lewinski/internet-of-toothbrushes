@@ -41,7 +41,7 @@
 
 // While the app is connected, after how many SLEEP_AMOUNTs will
 // we disconnect if it hasn't sent any data.
-#define IDLE_CONNECTION_TIMEOUT 15
+#define IDLE_CONNECTION_TIMEOUT 30
 
 #define SERIAL_BUFFER_LENGTH 200
 
@@ -124,20 +124,24 @@ bool readSerialCommand() {
 void handleSerialCommand() {
   if (strncmp("GetRTC", commandBuffer, 6) == 0) {
     currentTime = rtc.now();
+    Serial.print("GetRTC:");
     Serial.println(currentTime.unixtime());
 
   } else if (strncmp("SetRTC ", commandBuffer, 7) == 0) {
     uint32_t timestamp = strtoul(commandBuffer + 7, NULL, 10);
     RTC_DS3231::adjust(DateTime(timestamp));
-    Serial.println("ok");
+    Serial.println("SetRTC:ok");
 
   } else if (strncmp("GetLastEvent", commandBuffer, 12) == 0) {
+    Serial.print("GetLastEvent:");
     Serial.println(brushingStartedTimestamp);
+    Serial.print("GetLastEvent:");
     Serial.println(brushingStoppedTimestamp);
+    Serial.print("GetLastEvent:");
     Serial.println(brushingSessionLength);
 
   } else {
-    Serial.print("unknown command: ");
+    Serial.print("Unknown:");
     Serial.println(commandBuffer);
   }
 }
