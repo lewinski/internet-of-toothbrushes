@@ -54,13 +54,17 @@ enum ToothbrushState {
   AppConnected          // Connected to BLE central, waiting for serial commands
 };
 
+struct BrushingEvent {
+  uint32_t start;
+  uint32_t end;
+  uint32_t duration;
+};
+
 // Global variables for ultimate hubris
 volatile ToothbrushState  currentState = Idle;
 RTC_DS3231                rtc;
 DateTime                  currentTime;
-uint32_t                  brushingStartedTimestamp = 0;
-uint32_t                  brushingStoppedTimestamp = 0;
-uint32_t                  brushingSessionLength = 0;
+BrushingEvent             brushingEvent;
 AccelerationReading       lastAcceleration;
 AccelerationReading       currentAcceleration;
 AccelerationReading       deltaAcceleration;
@@ -135,12 +139,18 @@ void handleSerialCommand() {
 
   } else if (strncmp("GetLastEvent", commandBuffer, 12) == 0) {
     Serial.print("GetLastEvent:");
-    Serial.print(brushingStartedTimestamp);
+    Serial.print(brushingEvent.start);
     Serial.print(":");
-    Serial.print(brushingStoppedTimestamp);
+    Serial.print(brushingEvent.end);
     Serial.print(":");
-    Serial.print(brushingSessionLength);
+    Serial.print(brushingEvent.duration);
     Serial.println("");
+
+  } else if (strncmp("ClearLastEvent", commandBuffer, 14) == 0) {
+    brushingEvent.start = 0;
+    brushingEvent.end = 0;
+    brushingEvent.duration = 0;
+    Serial.println("ClearLastEvent:ok");
 
   } else {
     Serial.print("Unknown:");
@@ -150,6 +160,11 @@ void handleSerialCommand() {
 }
 
 void setup() {
+  // Start with a clean event
+  brushingEvent.start = 0;
+  brushingEvent.end = 0;
+  brushingEvent.duration = 0;
+
   // Bean Setup
   Bean.setBeanName("IoToothbrush");
   Bean.setAccelerationRange(ACCELERATION_RANGE);
@@ -218,9 +233,9 @@ void loop() {
 
       // Start brushing
       currentTime = rtc.now();
-      brushingStartedTimestamp = currentTime.unixtime();
-      brushingStoppedTimestamp = 0;
-      brushingSessionLength = 0;
+      brushingEvent.start = currentTime.unixtime();
+      brushingEvent.end = 0;
+      brushingEvent.duration = 0;
 
       // Set up for the Brushing state
       currentAcceleration = Bean.getAcceleration();
@@ -264,9 +279,9 @@ void loop() {
     case DoneBrushing:
       // Get the end time of the brushing event
       currentTime = rtc.now();
-      brushingStoppedTimestamp = currentTime.unixtime() - MOVEMENT_TIMEOUT;
+      brushingEvent.end = currentTime.unixtime() - MOVEMENT_TIMEOUT;
 
-      brushingSessionLength = brushingStoppedTimestamp - brushingStartedTimestamp;
+      brushingEvent.duration = brushingEvent.end - brushingEvent.start;
 
       // Transition to the Idle state
       currentState = Idle;
