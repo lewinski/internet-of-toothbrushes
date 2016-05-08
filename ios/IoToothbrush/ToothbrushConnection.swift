@@ -59,13 +59,20 @@ class ToothbrushConnection {
 
         case "GetLastEvent":
             print("GetLastEvent Response: \(args[1]) \(args[2]) \(args[3])")
-            if let startTimestamp = NSTimeInterval(args[1]), stopTimestamp = NSTimeInterval(args[2]) {
-                let duration = Int(args[3])
-                let startDate = NSDate(timeIntervalSince1970: startTimestamp)
-                let stopDate = NSDate(timeIntervalSince1970: stopTimestamp)
-                delegate?.brushingEventReceived(startDate, end: stopDate, duration: duration!)
+            if let startTimestamp = NSTimeInterval(args[1]), stopTimestamp = NSTimeInterval(args[2]), duration = Int(args[3]) {
+                if (duration < 10 || duration > 300) {
+                    print("Ignoring spurious brushing event.")
+                } else {
+                    let startDate = NSDate(timeIntervalSince1970: startTimestamp)
+                    let stopDate = NSDate(timeIntervalSince1970: stopTimestamp)
+                    delegate?.brushingEventReceived(startDate, end: stopDate, duration: duration)
+                }
+                delegate?.sendCommand("ClearLastEvent\n")
             }
             break
+
+        case "ClearLastEvent":
+            print("ClearLastEvent Response: \(args[1])")
 
         default:
             print("Unknown Response: \(command)")
