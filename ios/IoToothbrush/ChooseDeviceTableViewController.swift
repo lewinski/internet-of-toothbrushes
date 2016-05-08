@@ -24,12 +24,8 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
 
     // MARK: - View lifecycle
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        toothbrushDiscovery.delegate = self
-    }
-
     override func viewWillAppear(animated: Bool) {
+        toothbrushDiscovery.delegate = self
         toothbrushDiscovery.restartScan()
     }
     
@@ -42,7 +38,7 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
         if segue.identifier == "selectDeviceSegue" {
             if let selectedRow = tableView.indexPathForSelectedRow {
                 let settingsViewController = segue.destinationViewController as! SettingsViewController
-                settingsViewController.selectedBean = beans[selectedRow.row]
+                settingsViewController.device = beans[selectedRow.row]
             }
         }
     }

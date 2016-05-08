@@ -10,20 +10,41 @@ import UIKit
 import Bean_iOS_OSX_SDK
 
 class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, ToothbrushConnectionDelegate, PTDBeanDelegate {
+    struct DefaultsKeys {
+        static let deviceIdentifier = "DeviceIdentifier"
+    }
+
+    struct ConnectionStatus {
+        static let notConfigured = ""
+        static let searching = "Searching"
+        static let disconnected = "Not Connected"
+        static let connecting = "Connecting"
+        static let connected = "Connected"
+    }
 
     let dateFormatter = NSDateFormatter()
 
     var toothbrushDiscovery = ToothbrushDiscovery.sharedInstance
     var toothbrushConnection: ToothbrushConnection?
 
-    var selectedBean : PTDBean? {
+    var deviceIdentifier : NSUUID? {
         didSet {
-            if (selectedBean != nil) {
+            if deviceIdentifier != nil {
+                let defaults = NSUserDefaults.standardUserDefaults()
+                defaults.setValue(deviceIdentifier!.UUIDString, forKey: DefaultsKeys.deviceIdentifier)
+                deviceLabel.text = deviceIdentifier!.UUIDString
+            }
+        }
+    }
+
+    var device : PTDBean? {
+        didSet {
+            if (device != nil) {
                 if (!connected) {
+                    connectionStatusLabel.text = ConnectionStatus.disconnected
                     connectButton.enabled = true
                 }
-
-                deviceLabel.text = selectedBean!.identifier.UUIDString
+                deviceIdentifier = device!.identifier
             }
         }
     }
@@ -31,15 +52,14 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
     var connected = false {
         didSet {
             if (connected) {
-                connectionStatusLabel.text = "Connected"
+                connectionStatusLabel.text = ConnectionStatus.connected
+                connectButton.enabled = false
+            } else if (device == nil) {
+                connectionStatusLabel.text = ConnectionStatus.notConfigured
                 connectButton.enabled = false
             } else {
-                if (selectedBean == nil) {
-                    connectionStatusLabel.text = ""
-                } else {
-                    connectionStatusLabel.text = "Not Connected"
-                    connectButton.enabled = true
-                }
+                connectionStatusLabel.text = ConnectionStatus.disconnected
+                connectButton.enabled = true
             }
         }
     }
@@ -65,15 +85,61 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
         dateFormatter.timeStyle = .MediumStyle
     }
 
+    override func viewWillAppear(animated: Bool) {
+        if deviceIdentifier == nil {
+            let defaults = NSUserDefaults.standardUserDefaults()
+            if let uuidString = defaults.stringForKey(DefaultsKeys.deviceIdentifier) {
+                deviceIdentifier = NSUUID(UUIDString: uuidString)
+                if device == nil {
+                    toothbrushDiscovery.delegate = self
+                    toothbrushDiscovery.restartScan()
+                    connectionStatusLabel.text = ConnectionStatus.searching
+                }
+            }
+        }
+    }
+
+    override func viewWillDisappear(animated: Bool) {
+        toothbrushDiscovery.stopScan()
+        if let device = device {
+            toothbrushDiscovery.disconnectFrom(device)
+            toothbrushDiscovery.delegate = nil
+            connected = false
+        }
+    }
+
     @IBAction func unwindToSettingsViewController(segue: UIStoryboardSegue) {
     }
 
     @IBAction func connectToBean(sender: AnyObject) {
-        connectionStatusLabel.text = "Connecting"
+        connectionStatusLabel.text = ConnectionStatus.connecting
         connectButton.enabled = false
 
         toothbrushDiscovery.delegate = self
-        toothbrushDiscovery.connectTo(selectedBean!)
+        toothbrushDiscovery.connectTo(device!)
+    }
+
+    // MARK: PTDBeanDelegate
+
+    func beanDidUpdateRSSI(bean: PTDBean!, error: NSError!) {
+        signalStrengthLabel.text = String(bean.RSSI)
+    }
+
+    func beanDidUpdateBatteryVoltage(bean: PTDBean!, error: NSError!) {
+        batteryLabel.text = "\(bean.batteryVoltage) V"
+    }
+
+    func bean(bean: PTDBean!, serialDataReceived data: NSData!) {
+        toothbrushConnection?.handleIncomingData(data)
+    }
+
+    // MARK: ToothbrushDiscoveryDelegate
+
+    func didDiscoverBean(bean: PTDBean) {
+        if (bean.identifier == deviceIdentifier) {
+            device = bean
+            toothbrushDiscovery.stopScan()
+        }
     }
 
     func didConnectToBean(bean: PTDBean) {
@@ -97,22 +163,10 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
         connected = false
     }
 
-    func beanDidUpdateRSSI(bean: PTDBean!, error: NSError!) {
-        signalStrengthLabel.text = String(bean.RSSI)
-    }
-
-    func beanDidUpdateBatteryVoltage(bean: PTDBean!, error: NSError!) {
-        batteryLabel.text = "\(bean.batteryVoltage) V"
-    }
-    
-    func bean(bean: PTDBean!, serialDataReceived data: NSData!) {
-        toothbrushConnection?.handleIncomingData(data)
-    }
-
     // MARK: ToothbrushConnectionDelegate
 
     func sendCommand(command: String) {
-        selectedBean?.sendSerialString(command)
+        device?.sendSerialString(command)
     }
 
     func brushingEventReceived(start: NSDate, end: NSDate, duration: Int) {

@@ -72,6 +72,18 @@ class ToothbrushDiscovery: NSObject, PTDBeanManagerDelegate {
         }
     }
 
+    func disconnectFrom(bean: PTDBean) {
+        if (bean.state != .ConnectedAndValidated) {
+            return
+        }
+
+        var error : NSError?
+        beanManager.disconnectBean(bean, error: &error)
+        if let e = error {
+            print("[ERROR] disconnectBean: \(e)")
+        }
+    }
+
     func beanManagerDidUpdateState(beanManager: PTDBeanManager!) {
         if (scanning && beanManager.state == .PoweredOn) {
             startScan()
