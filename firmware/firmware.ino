@@ -35,6 +35,10 @@
 // the state machine.
 #define SLEEP_AMOUNT 1000
 
+// What is the least amount of time that we consider to be a valid
+// tooth brushing, in seconds?
+#define MINIMUM_BRUSHING_DURATION 10
+
 // After waking up, how many SLEEP_AMOUNTs of idle should indicate
 // that the device has stopped moving.
 #define MOVEMENT_TIMEOUT 10
@@ -64,7 +68,8 @@ struct BrushingEvent {
 volatile ToothbrushState  currentState = Idle;
 RTC_DS3231                rtc;
 DateTime                  currentTime;
-BrushingEvent             brushingEvent;
+BrushingEvent             lastBrushingEvent;
+BrushingEvent             currentBrushingEvent;
 AccelerationReading       lastAcceleration;
 AccelerationReading       currentAcceleration;
 AccelerationReading       deltaAcceleration;
@@ -139,17 +144,17 @@ void handleSerialCommand() {
 
   } else if (strncmp("GetLastEvent", commandBuffer, 12) == 0) {
     Serial.print("GetLastEvent:");
-    Serial.print(brushingEvent.start);
+    Serial.print(lastBrushingEvent.start);
     Serial.print(":");
-    Serial.print(brushingEvent.end);
+    Serial.print(lastBrushingEvent.end);
     Serial.print(":");
-    Serial.print(brushingEvent.duration);
+    Serial.print(lastBrushingEvent.duration);
     Serial.println("");
 
   } else if (strncmp("ClearLastEvent", commandBuffer, 14) == 0) {
-    brushingEvent.start = 0;
-    brushingEvent.end = 0;
-    brushingEvent.duration = 0;
+    lastBrushingEvent.start = 0;
+    lastBrushingEvent.end = 0;
+    lastBrushingEvent.duration = 0;
     Serial.println("ClearLastEvent:ok");
 
   } else {
@@ -161,9 +166,9 @@ void handleSerialCommand() {
 
 void setup() {
   // Start with a clean event
-  brushingEvent.start = 0;
-  brushingEvent.end = 0;
-  brushingEvent.duration = 0;
+  lastBrushingEvent.start = 0;
+  lastBrushingEvent.end = 0;
+  lastBrushingEvent.duration = 0;
 
   // Bean Setup
   Bean.setBeanName("IoToothbrush");
@@ -194,6 +199,10 @@ void loop() {
 
   switch (currentState) {
     case Idle:
+      currentBrushingEvent.start = 0;
+      currentBrushingEvent.end = 0;
+      currentBrushingEvent.duration = 0;
+
       // Attach ISR so we know when the wake up switch is triggered
       attachPinChangeInterrupt(PIN_WAKE, pinChanged, FALLING);
 
@@ -233,9 +242,9 @@ void loop() {
 
       // Start brushing
       currentTime = rtc.now();
-      brushingEvent.start = currentTime.unixtime();
-      brushingEvent.end = 0;
-      brushingEvent.duration = 0;
+      currentBrushingEvent.start = currentTime.unixtime();
+      currentBrushingEvent.end = 0;
+      currentBrushingEvent.duration = 0;
 
       // Set up for the Brushing state
       currentAcceleration = Bean.getAcceleration();
@@ -279,9 +288,12 @@ void loop() {
     case DoneBrushing:
       // Get the end time of the brushing event
       currentTime = rtc.now();
-      brushingEvent.end = currentTime.unixtime() - MOVEMENT_TIMEOUT;
+      currentBrushingEvent.end = currentTime.unixtime() - MOVEMENT_TIMEOUT;
+      currentBrushingEvent.duration = currentBrushingEvent.end - currentBrushingEvent.start;
 
-      brushingEvent.duration = brushingEvent.end - brushingEvent.start;
+      if (currentBrushingEvent.duration > MINIMUM_BRUSHING_DURATION) {
+        lastBrushingEvent = currentBrushingEvent;
+      }
 
       // Transition to the Idle state
       currentState = Idle;
