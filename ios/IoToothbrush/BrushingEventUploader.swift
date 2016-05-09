@@ -31,7 +31,7 @@ class BrushingEventUploader {
 
         let dateFormatter = NSDateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        jsonEvent["StartDate"] = timeFormatter.stringFromDate(event.start)
+        jsonEvent["StartDate"] = dateFormatter.stringFromDate(event.start)
         jsonEvent["EndDate"] = dateFormatter.stringFromDate(event.end)
 
         return jsonEvent

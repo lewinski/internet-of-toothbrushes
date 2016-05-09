@@ -9,15 +9,13 @@
 import UIKit
 
 class HistoryViewController: UIViewController {
+    @IBOutlet weak var webView: UIWebView!
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        print("HistoryViewController viewDidLoad")
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    override func viewWillAppear(animated: Bool) {
+        super.viewWillAppear(animated)
+        let htmlFile = NSBundle.mainBundle().pathForResource("charts", ofType: "html")
+        let htmlString = try! String(contentsOfFile: htmlFile!, encoding: NSUTF8StringEncoding)
+        webView.loadHTMLString(htmlString, baseURL: nil)
     }
 
     func unwindToHistoryViewContainer() {

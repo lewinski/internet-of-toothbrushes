@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+  <head>
+    <title>IoToothbrush Charts</title>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.2/Chart.min.js"></script>
+    <style type="text/css">
+      h1 {
+        font-family: -apple-system;
+        font-weight: 100;
+        font-size: 20pt;
+        text-align: center;
+
+      }
+      
+    </style>
+  </head>
+  <body>
+    <h1>Average Brushing Time</h1>
+    <canvas id="averageChart" width="300" height="240"></canvas>
+    <h1>Number of Times Brushed</h1>
+    <canvas id="countChart" width="300" height="240"></canvas>
+
+<script>
+  jQuery.getJSON('https://3ccrvcnr22.execute-api.us-east-1.amazonaws.com/prod/getBrushingSummary', function(data) {
+    var solidRed = 'rgba(255, 50, 0, 1)';
+    var transRed = 'rgba(255, 50, 0, 0.3)';
+    var solidGreen = 'rgba(50, 255, 0, 1)';
+    var transGreen = 'rgba(50, 255, 0, 0.3)';
+
+    var labels = [];
+    var averages = [];
+    var counts = [];
+    var countBorders = [];
+    var countBackgrounds = [];
+
+    for (date in data) {
+      labels.push(date);
+      averages.push(data[date].average);
+      counts.push(data[date].count);
+      if (data[date].count >= 2) {
+        countBorders.push(solidGreen);
+        countBackgrounds.push(transGreen);
+      } else {
+        countBorders.push(solidRed);
+        countBackgrounds.push(transRed);
+      }
+    }
+
+    var avg = document.getElementById("averageChart");
+    var avgChart = new Chart(avg, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Average Brushing Time",
+          data: averages,
+          fill: false,
+          pointStyle: 'circle',
+          borderColor: solidRed
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          yAxes: [{
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        },
+        legend: {
+          display: false
+        }
+      }
+    });
+    var count = document.getElementById("countChart");
+    var countChart = new Chart(count, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Times Brushed per Day",
+          data: counts,
+          fill: false,
+          pointStyle: 'circle',
+          backgroundColor: countBackgrounds,
+          borderColor: countBorders,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display: false
+            }
+          }],
+          yAxes: [{
+            gridLines: {
+              display: false
+            },
+            ticks: {
+              stepSize: 1,
+              beginAtZero: true
+            }
+          }]
+        },
+        legend: {
+          display: false
+        }
+      }
+    });
+  });
+</script>
+
+

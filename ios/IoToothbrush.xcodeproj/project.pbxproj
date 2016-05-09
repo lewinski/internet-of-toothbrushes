@@ -20,6 +20,7 @@
 		E1AC2F1A1CE038F900F85583 /* BrushingEventUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AC2F191CE038F900F85583 /* BrushingEventUploader.swift */; };
 		E1AC2F1C1CE03B4000F85583 /* BrushingEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AC2F1B1CE03B4000F85583 /* BrushingEvent.swift */; };
 		E1AD7F7A1CDE48CD008F4F70 /* ToothbrushConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AD7F791CDE48CD008F4F70 /* ToothbrushConnection.swift */; };
+		E1F7EE8F1CE05DA9006EB78E /* charts.html in Resources */ = {isa = PBXBuildFile; fileRef = E1F7EE8E1CE05DA9006EB78E /* charts.html */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		E1AC2F191CE038F900F85583 /* BrushingEventUploader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrushingEventUploader.swift; sourceTree = "<group>"; };
 		E1AC2F1B1CE03B4000F85583 /* BrushingEvent.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrushingEvent.swift; sourceTree = "<group>"; };
 		E1AD7F791CDE48CD008F4F70 /* ToothbrushConnection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToothbrushConnection.swift; sourceTree = "<group>"; };
+		E1F7EE8E1CE05DA9006EB78E /* charts.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = charts.html; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +94,7 @@
 		E1A886EA1CD6F09A005D1F13 /* IoToothbrush */ = {
 			isa = PBXGroup;
 			children = (
+				E1F7EE8E1CE05DA9006EB78E /* charts.html */,
 				E1A886F91CD6F09A005D1F13 /* Info.plist */,
 				E1A886EB1CD6F09A005D1F13 /* AppDelegate.swift */,
 				E1AC2F1B1CE03B4000F85583 /* BrushingEvent.swift */,
@@ -173,6 +176,7 @@
 				E1A886F81CD6F09A005D1F13 /* LaunchScreen.storyboard in Resources */,
 				E1A886F51CD6F09A005D1F13 /* Assets.xcassets in Resources */,
 				E1A886F31CD6F09A005D1F13 /* Main.storyboard in Resources */,
+				E1F7EE8F1CE05DA9006EB78E /* charts.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
