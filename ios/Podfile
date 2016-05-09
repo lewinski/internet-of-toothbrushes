@@ -3,4 +3,5 @@ platform :ios, '9.0'
 target 'IoToothbrush' do
   use_frameworks!
   pod 'Bean-iOS-OSX-SDK', '0.10.1'
+  pod 'Alamofire', '~> 3.4'
 end
