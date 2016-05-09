@@ -169,10 +169,16 @@ class SettingsViewController: UIViewController, ToothbrushDiscoveryDelegate, Too
         device?.sendSerialString(command)
     }
 
-    func brushingEventReceived(start: NSDate, end: NSDate, duration: Int) {
-        brushingStartedLabel.text = dateFormatter.stringFromDate(start)
-        brushingStoppedLabel.text = dateFormatter.stringFromDate(end)
-        brushingDurationLabel.text = "\(duration) seconds"
+    func brushingEventReceived(event: BrushingEvent) {
+        var uploadEvent = event
+        uploadEvent.device = deviceIdentifier
+
+        let uploader = BrushingEventUploader()
+        uploader.uploadBrushingEvent(uploadEvent)
+
+        brushingStartedLabel.text = dateFormatter.stringFromDate(event.start)
+        brushingStoppedLabel.text = dateFormatter.stringFromDate(event.end)
+        brushingDurationLabel.text = "\(event.duration) seconds"
     }
 
     func timeReceived(date: NSDate) {

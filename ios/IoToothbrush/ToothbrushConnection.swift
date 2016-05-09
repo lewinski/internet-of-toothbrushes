@@ -12,7 +12,7 @@ protocol ToothbrushConnectionDelegate: class {
     func sendCommand(command: String)
 
     func timeReceived(date: NSDate)
-    func brushingEventReceived(start: NSDate, end: NSDate, duration: Int)
+    func brushingEventReceived(event: BrushingEvent)
 }
 
 class ToothbrushConnection {
@@ -59,13 +59,13 @@ class ToothbrushConnection {
 
         case "GetLastEvent":
             print("GetLastEvent Response: \(args[1]) \(args[2]) \(args[3])")
-            if let startTimestamp = NSTimeInterval(args[1]), stopTimestamp = NSTimeInterval(args[2]), duration = Int(args[3]) {
+            if let startTimestamp = NSTimeInterval(args[1]), endTimestamp = NSTimeInterval(args[2]), duration = Int(args[3]) {
                 if (duration < 10 || duration > 300) {
                     print("Ignoring spurious brushing event.")
                 } else {
                     let startDate = NSDate(timeIntervalSince1970: startTimestamp)
-                    let stopDate = NSDate(timeIntervalSince1970: stopTimestamp)
-                    delegate?.brushingEventReceived(startDate, end: stopDate, duration: duration)
+                    let endDate = NSDate(timeIntervalSince1970: endTimestamp)
+                    delegate?.brushingEventReceived(BrushingEvent(start: startDate, end: endDate, duration: duration, device: nil))
                 }
                 delegate?.sendCommand("ClearLastEvent\n")
             }
