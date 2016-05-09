@@ -26,8 +26,8 @@
   jQuery.getJSON('https://3ccrvcnr22.execute-api.us-east-1.amazonaws.com/prod/getBrushingSummary', function(data) {
     var solidRed = 'rgba(255, 50, 0, 1)';
     var transRed = 'rgba(255, 50, 0, 0.3)';
-    var solidGreen = 'rgba(50, 255, 0, 1)';
-    var transGreen = 'rgba(50, 255, 0, 0.3)';
+    var solidGreen = 'rgba(0, 220, 30, 1)';
+    var transGreen = 'rgba(0, 220, 30, 0.3)';
 
     var labels = [];
     var averages = [];
@@ -35,18 +35,19 @@
     var countBorders = [];
     var countBackgrounds = [];
 
-    for (date in data) {
-      labels.push(date);
-      averages.push(data[date].average);
-      counts.push(data[date].count);
-      if (data[date].count >= 2) {
-        countBorders.push(solidGreen);
-        countBackgrounds.push(transGreen);
-      } else {
-        countBorders.push(solidRed);
-        countBackgrounds.push(transRed);
-      }
-    }
+    data.forEach(function (item) {
+        labels.push(item.date);
+        averages.push(item.average);
+        counts.push(item.count);
+        if (item.count >= 2) {
+            countBorders.push(solidGreen);
+            countBackgrounds.push(transGreen);
+        } else {
+            countBorders.push(solidRed);
+            countBackgrounds.push(transRed);
+        }
+
+    });
 
     var avg = document.getElementById("averageChart");
     var avgChart = new Chart(avg, {
@@ -75,6 +76,7 @@
         }
       }
     });
+
     var count = document.getElementById("countChart");
     var countChart = new Chart(count, {
       type: 'bar',
