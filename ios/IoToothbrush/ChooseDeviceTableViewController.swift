@@ -15,6 +15,7 @@ class ChooseDeviceTableViewController: UITableViewController, ToothbrushDiscover
 
     
     @IBAction func refreshBeans(sender: AnyObject) {
+        beans.removeAll()
         toothbrushDiscovery.restartScan()
     }
     
