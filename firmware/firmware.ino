@@ -12,6 +12,7 @@
  * - 'GetRTC'         : print the current unix timestamp from the RTC
  * - 'SetRTC <value>' : set the RTC's unix timestamp to value
  * - 'GetLastEvent'   : prints the start/stop/duration of the last brushing event
+ * - 'ClearLastEvent' : clears the last brushing event, essentially acknowledging it
  */
 
 #include <PinChangeInt.h>
